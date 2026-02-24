@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scan Presensi</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+
+<h2>Scan QR</h2>
+<div id="reader" style="width:300px"></div>
+<h3 id="status"></h3>
+
+<script>
+
+const BASE="https://script.google.com/macros/s/AKfycbwwyLBVyBJMqAE7tO4RihLAN7q_98osq22fp3k-fBjqzx1x66tRx2FgUkNpHSTqp8NC/exec";
+
+function param(n){
+  return new URL(location.href).searchParams.get(n);
+}
+
+const token=param("token");
+const course=param("course");
+const session=param("session");
+
+const user_id=localStorage.getItem("nim") ||
+  prompt("Masukkan NIM:");
+
+localStorage.setItem("nim",user_id);
+
+const device_id="web-"+Math.random().toString(36).substring(2,8);
+
+async function checkin(){
+
+  status.innerText="Mengirim presensi...";
+
+  const res=await fetch(BASE+"?path=/presence/checkin",{
+    method:"POST",
+    body:JSON.stringify({
+      user_id:user_id,
+      device_id:device_id,
+      course_id:course,
+      session_id:session,
+      qr_token:token,
+      ts:new Date().toISOString()
+    })
+  });
+
+  const json=await res.json();
+
+  if(json.ok){
+    status.innerText="✅ PRESENSI BERHASIL";
+  }else{
+    status.innerText="❌ "+json.error;
+  }
+}
+
+// jika buka dari QR → langsung checkin
+if(token){
+  checkin();
+}
+
+// kalau buka manual → scan kamera
+else{
+
+const scanner=new Html5Qrcode("reader");
+
+scanner.start(
+  {facingMode:"environment"},
+  {fps:10,qrbox:250},
+  text=>{
+    scanner.stop();
+    location.href=text;
+  }
+);
+
+}
+
+</script>
+
+</body>
+</html>
