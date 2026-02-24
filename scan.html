@@ -50,9 +50,25 @@ async function checkin(){
   const json=await res.json();
 
   if(json.ok){
+
+    // teks besar
     status.innerText="✅ PRESENSI BERHASIL";
+    status.style.color="green";
+    status.style.fontSize="22px";
+
+    // bunyi beep
+    const audio=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+    audio.play();
+
+    // popup
+    alert("Presensi berhasil!");
+
+    // kirim signal ke halaman QR dosen
+    localStorage.setItem("qr_used_"+token,"1");
+
   }else{
     status.innerText="❌ "+json.error;
+    status.style.color="red";
   }
 }
 
