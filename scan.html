@@ -30,6 +30,27 @@ h2{
   color:#1e293b;
 }
 
+input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #e2e8f0;
+  font-size:14px;
+  margin-bottom:15px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#6366f1;
+  color:white;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+
 #reader{
   width:260px;
   margin:15px auto;
@@ -41,17 +62,9 @@ h2{
   font-weight:600;
 }
 
-.loading{
-  color:#0f172a;
-}
-
-.success{
-  color:#16a34a;
-}
-
-.error{
-  color:#dc2626;
-}
+.loading{ color:#0f172a; }
+.success{ color:#16a34a; }
+.error{ color:#dc2626; }
 
 .footer{
   margin-top:15px;
@@ -64,10 +77,22 @@ h2{
 <body>
 
 <div class="card">
-  <h2>📷 Scan QR Presensi</h2>
-  <div id="reader"></div>
-  <div id="status" class="loading">Siapkan kamera...</div>
-  <div class="footer">Arahkan kamera ke QR Code</div>
+
+  <h2>Scan QR Presensi</h2>
+
+  <!-- FORM NIM -->
+  <div id="loginBox">
+    <input id="nimInput" placeholder="Masukkan NIM">
+    <button onclick="saveNIM()">Mulai Scan</button>
+  </div>
+
+  <!-- SCANNER -->
+  <div id="scanBox" style="display:none;">
+    <div id="reader"></div>
+    <div id="status" class="loading">Siapkan kamera...</div>
+    <div class="footer">Arahkan kamera ke QR Code</div>
+  </div>
+
 </div>
 
 <script>
@@ -83,19 +108,33 @@ const token   = param("token");
 const course  = param("course");
 const session = param("session");
 
-// ================= USER =================
-let user_id = localStorage.getItem("nim");
-if(!user_id){
-  user_id = prompt("Masukkan NIM:");
-  localStorage.setItem("nim", user_id);
-}
-
+// ================= GLOBAL =================
+let user_id = null;
 const device_id = "web-" + Math.random().toString(36).substring(2,8);
+
+// ================= SAVE NIM =================
+function saveNIM(){
+  const nim = nimInput.value.trim();
+  if(!nim){
+    alert("NIM wajib diisi");
+    return;
+  }
+
+  user_id = nim;
+  loginBox.style.display="none";
+  scanBox.style.display="block";
+
+  if(!token){
+    startScanner();
+  }else{
+    checkin();
+  }
+}
 
 // ================= CHECKIN =================
 async function checkin(){
 
-  setStatus("⏳ Mengirim presensi...", "loading");
+  setStatus("Mengirim presensi...", "loading");
 
   try{
     const res = await fetch(BASE+"?path=/presence/checkin",{
@@ -113,11 +152,10 @@ async function checkin(){
     const json = await res.json();
 
     if(json.ok){
-      setStatus("✅ PRESENSI BERHASIL", "success");
+      setStatus("PRESENSI BERHASIL", "success");
 
       const audio = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
       audio.play();
-
     }else{
       setStatus("❌ "+json.error, "error");
     }
@@ -132,12 +170,8 @@ function setStatus(text, type){
   status.className = type;
 }
 
-// ================= MODE =================
-if(token){
-  // buka dari QR
-  checkin();
-}else{
-  // scan kamera
+// ================= SCANNER =================
+function startScanner(){
   const scanner = new Html5Qrcode("reader");
 
   scanner.start(
@@ -148,6 +182,17 @@ if(token){
       location.href = text;
     }
   );
+}
+
+// ================= INIT =================
+if(token){
+  // kalau buka dari QR → tampil form NIM dulu
+  loginBox.style.display="block";
+  scanBox.style.display="none";
+}else{
+  // buka manual → input NIM dulu baru scan
+  loginBox.style.display="block";
+  scanBox.style.display="none";
 }
 </script>
 
