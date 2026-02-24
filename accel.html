@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Accelerometer Client</title>
+</head>
+<body>
+
+<h2>Accelerometer</h2>
+<p id="live">Waiting sensor...</p>
+<button onclick="start()">Start</button>
+<button onclick="stop()">Stop</button>
+
+<h3>Latest from Server</h3>
+<pre id="latest"></pre>
+
+<script>
+const BASE_URL="https://script.google.com/macros/s/AKfycbwUt9-A6PCcwqibwoBAMS4SszxWfRS76_ay-bPqqR9eezjcGifaYuKT6V2GipeMeqbc/exec"; // ganti
+const device_id="dev-"+Math.random().toString(36).substring(2,8);
+
+let samples=[];
+let timerSend=null;
+
+// ================= SENSOR =================
+window.addEventListener("devicemotion", e=>{
+  const x=e.accelerationIncludingGravity.x;
+  const y=e.accelerationIncludingGravity.y;
+  const z=e.accelerationIncludingGravity.z;
+
+  live.innerText=`x:${x?.toFixed(2)} y:${y?.toFixed(2)} z:${z?.toFixed(2)}`;
+
+  samples.push({
+    t:new Date().toISOString(),
+    x:x,
+    y:y,
+    z:z
+  });
+});
+
+// ================= SEND BATCH =================
+function start(){
+  timerSend=setInterval(sendBatch,3000); // tiap 3 detik
+}
+
+function stop(){
+  clearInterval(timerSend);
+}
+
+async function sendBatch(){
+  if(samples.length==0) return;
+
+  const payload={
+    device_id:device_id,
+    ts:new Date().toISOString(),
+    samples:samples
+  };
+
+  samples=[];
+
+  const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
+    method:"POST",
+    body:JSON.stringify(payload)
+  });
+
+  const json=await res.json();
+  console.log("POST:",json);
+}
+
+// ================= GET LATEST =================
+async function getLatest(){
+  const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id);
+  const json=await res.json();
+
+  if(json.ok){
+    latest.innerText=
+`time: ${json.data.t}
+x: ${json.data.x}
+y: ${json.data.y}
+z: ${json.data.z}`;
+  }
+}
+
+setInterval(getLatest,2000);
+</script>
+
+</body>
+</html>
