@@ -1,98 +1,154 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Scan Presensi</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  margin:0;
+}
+
+.card{
+  background:white;
+  padding:30px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  width:320px;
+  text-align:center;
+}
+
+h2{
+  margin-top:0;
+  color:#1e293b;
+}
+
+#reader{
+  width:260px;
+  margin:15px auto;
+}
+
+#status{
+  margin-top:15px;
+  font-size:16px;
+  font-weight:600;
+}
+
+.loading{
+  color:#0f172a;
+}
+
+.success{
+  color:#16a34a;
+}
+
+.error{
+  color:#dc2626;
+}
+
+.footer{
+  margin-top:15px;
+  font-size:12px;
+  color:#64748b;
+}
+</style>
 </head>
 
 <body>
 
-<h2>Scan QR</h2>
-<div id="reader" style="width:300px"></div>
-<h3 id="status"></h3>
+<div class="card">
+  <h2>📷 Scan QR Presensi</h2>
+  <div id="reader"></div>
+  <div id="status" class="loading">Siapkan kamera...</div>
+  <div class="footer">Arahkan kamera ke QR Code</div>
+</div>
 
 <script>
+const BASE="https://script.google.com/macros/s/AKfycbxVG8oKaiMeiH5ksPCv5_DF2TLUEHiKY4lKOOcz3IsERclqG4-9duO-QEM-1fUxKjOu/exec";
 
-const BASE="https://script.google.com/macros/s/AKfycby4WefkN5bfWqC7rrgvCUvTl5ph3a-xooKkhRwc0BUwyrx-vSTSQosmlAfKCpy9kW3a/exec";
-
+// ================= UTILITY =================
 function param(n){
   return new URL(location.href).searchParams.get(n);
 }
 
-const token=param("token");
-const course=param("course");
-const session=param("session");
+// ================= PARAM =================
+const token   = param("token");
+const course  = param("course");
+const session = param("session");
 
-const user_id=localStorage.getItem("nim") ||
-  prompt("Masukkan NIM:");
+// ================= USER =================
+let user_id = localStorage.getItem("nim");
+if(!user_id){
+  user_id = prompt("Masukkan NIM:");
+  localStorage.setItem("nim", user_id);
+}
 
-localStorage.setItem("nim",user_id);
+const device_id = "web-" + Math.random().toString(36).substring(2,8);
 
-const device_id="web-"+Math.random().toString(36).substring(2,8);
-
+// ================= CHECKIN =================
 async function checkin(){
 
-  status.innerText="Mengirim presensi...";
+  setStatus("⏳ Mengirim presensi...", "loading");
 
-  const res=await fetch(BASE+"?path=/presence/checkin",{
-    method:"POST",
-    body:JSON.stringify({
-      user_id:user_id,
-      device_id:device_id,
-      course_id:course,
-      session_id:session,
-      qr_token:token,
-      ts:new Date().toISOString()
-    })
-  });
+  try{
+    const res = await fetch(BASE+"?path=/presence/checkin",{
+      method:"POST",
+      body:JSON.stringify({
+        user_id:user_id,
+        device_id:device_id,
+        course_id:course,
+        session_id:session,
+        qr_token:token,
+        ts:new Date().toISOString()
+      })
+    });
 
-  const json=await res.json();
+    const json = await res.json();
 
-  if(json.ok){
+    if(json.ok){
+      setStatus("✅ PRESENSI BERHASIL", "success");
 
-    // teks besar
-    status.innerText="✅ PRESENSI BERHASIL";
-    status.style.color="green";
-    status.style.fontSize="22px";
+      const audio = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+      audio.play();
 
-    // bunyi beep
-    const audio=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-    audio.play();
+    }else{
+      setStatus("❌ "+json.error, "error");
+    }
 
-    // popup
-    alert("Presensi berhasil!");
-
-    // kirim signal ke halaman QR dosen
-    localStorage.setItem("qr_used_"+token,"1");
-
-  }else{
-    status.innerText="❌ "+json.error;
-    status.style.color="red";
+  }catch(err){
+    setStatus("❌ Gagal koneksi server", "error");
   }
 }
 
-// jika buka dari QR → langsung checkin
+function setStatus(text, type){
+  status.innerText = text;
+  status.className = type;
+}
+
+// ================= MODE =================
 if(token){
+  // buka dari QR
   checkin();
+}else{
+  // scan kamera
+  const scanner = new Html5Qrcode("reader");
+
+  scanner.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:220 },
+    text=>{
+      scanner.stop();
+      location.href = text;
+    }
+  );
 }
-
-// kalau buka manual → scan kamera
-else{
-
-const scanner=new Html5Qrcode("reader");
-
-scanner.start(
-  {facingMode:"environment"},
-  {fps:10,qrbox:250},
-  text=>{
-    scanner.stop();
-    location.href=text;
-  }
-);
-
-}
-
 </script>
 
 </body>
