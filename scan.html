@@ -25,18 +25,14 @@ body{
   text-align:center;
 }
 
-h2{
-  margin-top:0;
-  color:#1e293b;
-}
+h2{ color:#1e293b; }
 
 input{
   width:100%;
   padding:12px;
   border-radius:10px;
   border:1px solid #e2e8f0;
-  font-size:14px;
-  margin-bottom:15px;
+  margin-bottom:12px;
 }
 
 button{
@@ -46,31 +42,20 @@ button{
   border-radius:12px;
   background:#6366f1;
   color:white;
-  font-size:15px;
   font-weight:600;
   cursor:pointer;
 }
 
-#reader{
-  width:260px;
-  margin:15px auto;
-}
+#reader{ width:260px; margin:15px auto; }
 
 #status{
   margin-top:15px;
-  font-size:16px;
   font-weight:600;
 }
 
 .loading{ color:#0f172a; }
 .success{ color:#16a34a; }
 .error{ color:#dc2626; }
-
-.footer{
-  margin-top:15px;
-  font-size:12px;
-  color:#64748b;
-}
 </style>
 </head>
 
@@ -78,41 +63,54 @@ button{
 
 <div class="card">
 
-  <h2>Scan QR Presensi</h2>
+<h2>📷 Scan QR Presensi</h2>
 
-  <!-- FORM NIM -->
-  <div id="loginBox">
-    <input id="nimInput" placeholder="Masukkan NIM">
-    <button onclick="saveNIM()">Mulai Scan</button>
-  </div>
+<div id="loginBox">
+  <input id="nimInput" placeholder="Masukkan NIM">
+  <button onclick="saveNIM()">Mulai Scan</button>
+</div>
 
-  <!-- SCANNER -->
-  <div id="scanBox" style="display:none;">
-    <div id="reader"></div>
-    <div id="status" class="loading">Siapkan kamera...</div>
-    <div class="footer">Arahkan kamera ke QR Code</div>
-  </div>
+<div id="scanBox" style="display:none;">
+  <div id="reader"></div>
+  <div id="status" class="loading">Siapkan kamera...</div>
+</div>
 
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycbxVG8oKaiMeiH5ksPCv5_DF2TLUEHiKY4lKOOcz3IsERclqG4-9duO-QEM-1fUxKjOu/exec";
+const BASE="https://script.google.com/macros/s/AKfycbyoO2j6c1HIeer5C-BrWuWn-BXHgX08unPbUS1bm1cxnAevESyJIv0T_208zPmRVpEj/exec";
 
-// ================= UTILITY =================
+// DOM
+const loginBox = document.getElementById("loginBox");
+const scanBox  = document.getElementById("scanBox");
+const nimInput = document.getElementById("nimInput");
+const statusEl = document.getElementById("status");
+
+// PARAM
 function param(n){
   return new URL(location.href).searchParams.get(n);
 }
-
-// ================= PARAM =================
 const token   = param("token");
 const course  = param("course");
 const session = param("session");
 
-// ================= GLOBAL =================
-let user_id = null;
+// USER
+let user_id = localStorage.getItem("nim");
 const device_id = "web-" + Math.random().toString(36).substring(2,8);
 
-// ================= SAVE NIM =================
+// INIT
+if(user_id){
+  loginBox.style.display="none";
+  scanBox.style.display="block";
+
+  if(token){
+    checkin();
+  }else{
+    startScanner();
+  }
+}
+
+// SAVE NIM
 function saveNIM(){
   const nim = nimInput.value.trim();
   if(!nim){
@@ -121,20 +119,21 @@ function saveNIM(){
   }
 
   user_id = nim;
+  localStorage.setItem("nim", nim);
+
   loginBox.style.display="none";
   scanBox.style.display="block";
 
-  if(!token){
-    startScanner();
-  }else{
+  if(token){
     checkin();
+  }else{
+    startScanner();
   }
 }
 
-// ================= CHECKIN =================
+// CHECKIN
 async function checkin(){
-
-  setStatus("Mengirim presensi...", "loading");
+  setStatus("⏳ Mengirim presensi...", "loading");
 
   try{
     const res = await fetch(BASE+"?path=/presence/checkin",{
@@ -152,10 +151,11 @@ async function checkin(){
     const json = await res.json();
 
     if(json.ok){
-      setStatus("PRESENSI BERHASIL", "success");
+      setStatus("✅ PRESENSI BERHASIL", "success");
 
       const audio = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
       audio.play();
+
     }else{
       setStatus("❌ "+json.error, "error");
     }
@@ -165,12 +165,7 @@ async function checkin(){
   }
 }
 
-function setStatus(text, type){
-  status.innerText = text;
-  status.className = type;
-}
-
-// ================= SCANNER =================
+// SCANNER
 function startScanner(){
   const scanner = new Html5Qrcode("reader");
 
@@ -184,15 +179,10 @@ function startScanner(){
   );
 }
 
-// ================= INIT =================
-if(token){
-  // kalau buka dari QR → tampil form NIM dulu
-  loginBox.style.display="block";
-  scanBox.style.display="none";
-}else{
-  // buka manual → input NIM dulu baru scan
-  loginBox.style.display="block";
-  scanBox.style.display="none";
+// STATUS
+function setStatus(text, type){
+  statusEl.innerText = text;
+  statusEl.className = type;
 }
 </script>
 
