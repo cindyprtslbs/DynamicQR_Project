@@ -1,41 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Accelerometer Client</title>
+<meta charset="UTF-8">
+<title>Accelerometer Telemetry</title>
+
+<style>
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  margin:0;
+}
+
+.card{
+  background:white;
+  padding:28px;
+  border-radius:20px;
+  box-shadow:0 12px 35px rgba(0,0,0,0.08);
+  width:340px;
+  text-align:center;
+}
+
+h2{
+  margin-top:0;
+  color:#1e293b;
+}
+
+.device{
+  font-size:13px;
+  background:#f1f5f9;
+  padding:8px;
+  border-radius:10px;
+  margin-bottom:15px;
+  color:#334155;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#6366f1;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+  margin-bottom:10px;
+}
+
+button.stop{
+  background:#ef4444;
+}
+
+button.secondary{
+  background:#0ea5e9;
+}
+
+.status{
+  margin-top:10px;
+  font-weight:600;
+}
+
+.running{ color:#16a34a; }
+.stopped{ color:#ef4444; }
+.idle{ color:#475569; }
+
+.counter{
+  margin-top:5px;
+  font-size:14px;
+  color:#475569;
+}
+
+pre{
+  background:#0f172a;
+  color:#22d3ee;
+  padding:10px;
+  border-radius:10px;
+  font-size:12px;
+  text-align:left;
+  max-height:120px;
+  overflow:auto;
+}
+</style>
 </head>
+
 <body>
 
-<h2>Accelerometer Telemetry</h2>
+<div class="card">
 
-<p>Device ID: <input type="text" id="deviceId" value="dev-001"></p>
+<h2>📱 Accelerometer</h2>
+
+<div class="device">
+Device ID:<br>
+<b id="deviceLabel"></b>
+</div>
+
 <button onclick="startAccel()">Start</button>
-<button onclick="stopAccel()">Stop</button>
-<button onclick="getLatest()">Get Latest</button>
+<button class="stop" onclick="stopAccel()">Stop</button>
+<button class="secondary" onclick="getLatest()">Get Latest</button>
 
-<h3>Latest Data:</h3>
+<div class="status idle" id="status">Idle</div>
+<div class="counter">Collected: <span id="count">0</span></div>
+
 <pre id="output"></pre>
 
-<script>
-const BASE_URL = "https://script.google.com/macros/s/AKfycbyTPZsVHNWOo176DZBhExkDSzy2cSriBxttIQ4-pp5xbBM_sUSPaMqRk1UofhPxStQ/exec"; 
+</div>
 
+<script>
+const BASE="https://script.google.com/macros/s/AKfycbyTPZsVHNWOo176DZBhExkDSzy2cSriBxttIQ4-pp5xbBM_sUSPaMqRk1UofhPxStQ/exec";
+
+// ======================
+// DEVICE ID SAMA DENGAN scan.html
+// ======================
+function getDeviceId(){
+  let id = localStorage.getItem("device_id");
+  if(!id){
+    id = "web-" + crypto.randomUUID();
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+}
+const device_id = getDeviceId();
+document.getElementById("deviceLabel").innerText = device_id;
+
+// ======================
 let samples = [];
 let motionHandler = null;
 let intervalSender = null;
 
-function startAccel() {
+// ======================
+async function startAccel(){
 
-  if (typeof DeviceMotionEvent === "undefined") {
-    alert("DeviceMotion tidak didukung di device ini");
+  if(typeof DeviceMotionEvent === "undefined"){
+    alert("DeviceMotion tidak didukung");
     return;
   }
 
+  // iOS permission
+  if(typeof DeviceMotionEvent.requestPermission === "function"){
+    const permission = await DeviceMotionEvent.requestPermission();
+    if(permission !== "granted"){
+      alert("Permission ditolak");
+      return;
+    }
+  }
+
   samples = [];
+  document.getElementById("status").innerText = "Running";
+  document.getElementById("status").className = "status running";
 
-  motionHandler = function(event) {
+  motionHandler = function(event){
     const acc = event.accelerationIncludingGravity;
-
-    if (!acc) return;
+    if(!acc) return;
 
     samples.push({
       t: new Date().toISOString(),
@@ -43,69 +161,68 @@ function startAccel() {
       y: acc.y || 0,
       z: acc.z || 0
     });
+
+    document.getElementById("count").innerText = samples.length;
   };
 
   window.addEventListener("devicemotion", motionHandler);
-
-  // kirim batch tiap 5 detik
   intervalSender = setInterval(sendBatch, 5000);
-
-  alert("Accelerometer started");
 }
 
-function stopAccel() {
+// ======================
+function stopAccel(){
   window.removeEventListener("devicemotion", motionHandler);
   clearInterval(intervalSender);
-  alert("Stopped");
+  document.getElementById("status").innerText = "Stopped";
+  document.getElementById("status").className = "status stopped";
 }
 
-async function sendBatch() {
+// ======================
+async function sendBatch(){
 
-  if (samples.length === 0) return;
-
-  const deviceId = document.getElementById("deviceId").value;
+  if(samples.length === 0) return;
 
   const payload = {
-    device_id: deviceId,
+    device_id: device_id,
     ts: new Date().toISOString(),
     samples: samples
   };
 
-  try {
-    const res = await fetch(BASE_URL + "?path=/telemetry/accel", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
+  try{
+    const res = await fetch(BASE_URL+"?path=/telemetry/accel",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
       },
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
-    console.log("Sent:", data);
+    const json = await res.json();
 
-    samples = []; // reset setelah kirim
+    if(json.ok){
+      samples = [];
+      document.getElementById("count").innerText = 0;
+    }
 
-  } catch (err) {
-    console.error("Error sending:", err);
+  }catch(err){
+    console.log("Network error");
   }
 }
 
-async function getLatest() {
-
-  const deviceId = document.getElementById("deviceId").value;
-
-  try {
+// ======================
+async function getLatest(){
+  try{
     const res = await fetch(
-      BASE_URL + "?path=/telemetry/accel/latest&device_id=" + deviceId
+      BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id
     );
 
-    const data = await res.json();
+    const json = await res.json();
 
-    document.getElementById("output").textContent =
-      JSON.stringify(data, null, 2);
+    document.getElementById("output").innerText =
+      JSON.stringify(json,null,2);
 
-  } catch (err) {
-    console.error(err);
+  }catch(err){
+    console.log("Error get latest");
   }
 }
 </script>
