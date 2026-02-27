@@ -1,114 +1,113 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Accelerometer Client</title>
+  <meta charset="UTF-8">
+  <title>Accelerometer Client</title>
 </head>
 <body>
 
-<h2>Accelerometer</h2>
-<p id="live">Waiting sensor...</p>
-<button onclick="start()">Start</button>
-<button onclick="stop()">Stop</button>
+<h2>Accelerometer Telemetry</h2>
 
-<h3>Latest from Server</h3>
-<pre id="latest"></pre>
+<p>Device ID: <input type="text" id="deviceId" value="dev-001"></p>
+<button onclick="startAccel()">Start</button>
+<button onclick="stopAccel()">Stop</button>
+<button onclick="getLatest()">Get Latest</button>
+
+<h3>Latest Data:</h3>
+<pre id="output"></pre>
 
 <script>
-const BASE_URL="https://script.google.com/macros/s/AKfycbytvsRFhjR45af_ly5AiHv-c2gPJ5oRADjfREgFDHB3N2VTn5NBcY7Q3CW8XcVv10qY/exec";
-const device_id="dev-"+Math.random().toString(36).substring(2,8);
+const BASE_URL = "https://script.google.com/macros/s/AKfycbyTPZsVHNWOo176DZBhExkDSzy2cSriBxttIQ4-pp5xbBM_sUSPaMqRk1UofhPxStQ/exec"; 
 
-let samples=[];
-let timerSend=null;
-let motionHandler=null;
-let isRunning=false;
+let samples = [];
+let motionHandler = null;
+let intervalSender = null;
 
-// ================= START =================
-function start(){
-  if(isRunning) return;
-  isRunning=true;
+function startAccel() {
 
-  motionHandler = e=>{
-    const x=e.accelerationIncludingGravity?.x;
-    const y=e.accelerationIncludingGravity?.y;
-    const z=e.accelerationIncludingGravity?.z;
+  if (typeof DeviceMotionEvent === "undefined") {
+    alert("DeviceMotion tidak didukung di device ini");
+    return;
+  }
 
-    live.innerText=`x:${x?.toFixed(2)} y:${y?.toFixed(2)} z:${z?.toFixed(2)}`;
+  samples = [];
+
+  motionHandler = function(event) {
+    const acc = event.accelerationIncludingGravity;
+
+    if (!acc) return;
 
     samples.push({
-      t:new Date().toISOString(),
-      x:x,
-      y:y,
-      z:z
+      t: new Date().toISOString(),
+      x: acc.x || 0,
+      y: acc.y || 0,
+      z: acc.z || 0
     });
   };
 
   window.addEventListener("devicemotion", motionHandler);
 
-  timerSend=setInterval(sendBatch,3000);
+  // kirim batch tiap 5 detik
+  intervalSender = setInterval(sendBatch, 5000);
+
+  alert("Accelerometer started");
 }
 
-// ================= STOP =================
-function stop(){
-  if(!isRunning) return;
-  isRunning=false;
-
-  clearInterval(timerSend);
-  timerSend=null;
-
-  if(motionHandler){
-    window.removeEventListener("devicemotion", motionHandler);
-    motionHandler=null;
-  }
-
-  live.innerText="Stopped";
-  samples=[];
+function stopAccel() {
+  window.removeEventListener("devicemotion", motionHandler);
+  clearInterval(intervalSender);
+  alert("Stopped");
 }
 
-// ================= SEND =================
-async function sendBatch(){
-  if(samples.length==0) return;
+async function sendBatch() {
 
-  const payload={
-    device_id:device_id,
-    ts:new Date().toISOString(),
-    samples:samples
+  if (samples.length === 0) return;
+
+  const deviceId = document.getElementById("deviceId").value;
+
+  const payload = {
+    device_id: deviceId,
+    ts: new Date().toISOString(),
+    samples: samples
   };
 
-  samples=[];
-
-  try{
-    const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
-      method:"POST",
-      body:JSON.stringify(payload)
+  try {
+    const res = await fetch(BASE_URL + "?path=/telemetry/accel", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
     });
 
-    const json=await res.json();
-    console.log("POST:",json);
-  }catch(err){
-    console.log("send error",err);
+    const data = await res.json();
+    console.log("Sent:", data);
+
+    samples = []; // reset setelah kirim
+
+  } catch (err) {
+    console.error("Error sending:", err);
   }
 }
 
-// ================= GET LATEST =================
-async function getLatest(){
-  try{
-    const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id);
-    const json=await res.json();
+async function getLatest() {
 
-    if(json.ok){
-      latest.innerText=
-`time: ${json.data.t}
-x: ${json.data.x}
-y: ${json.data.y}
-z: ${json.data.z}`;
-    }
-  }catch(err){
-    console.log("latest error");
+  const deviceId = document.getElementById("deviceId").value;
+
+  try {
+    const res = await fetch(
+      BASE_URL + "?path=/telemetry/accel/latest&device_id=" + deviceId
+    );
+
+    const data = await res.json();
+
+    document.getElementById("output").textContent =
+      JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    console.error(err);
   }
 }
-
-setInterval(getLatest,2000);
 </script>
 
 </body>
