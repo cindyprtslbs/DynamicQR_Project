@@ -1,180 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Accelerometer</title>
-
-<style>
-body{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
-  margin:0;
-}
-
-.card{
-  background:white;
-  padding:30px;
-  border-radius:20px;
-  box-shadow:0 15px 40px rgba(0,0,0,0.08);
-  width:350px;
-  text-align:center;
-}
-
-h2{
-  margin-top:0;
-  color:#1e293b;
-}
-
-.device{
-  background:#f1f5f9;
-  padding:10px;
-  border-radius:12px;
-  font-size:13px;
-  margin-bottom:15px;
-  color:#334155;
-}
-
-.sensor{
-  font-size:18px;
-  font-weight:600;
-  margin:10px 0;
-  color:#0f172a;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:12px;
-  font-weight:600;
-  cursor:pointer;
-  margin-bottom:10px;
-}
-
-.start{ background:#6366f1; color:white; }
-.stop{ background:#ef4444; color:white; }
-.latest{ background:#0ea5e9; color:white; }
-
-.status{
-  margin-top:8px;
-  font-weight:600;
-}
-
-.running{ color:#16a34a; }
-.stopped{ color:#ef4444; }
-.idle{ color:#64748b; }
-
-.counter{
-  font-size:14px;
-  color:#64748b;
-  margin-bottom:10px;
-}
-
-pre{
-  background:#0f172a;
-  color:#22d3ee;
-  padding:10px;
-  border-radius:10px;
-  font-size:12px;
-  text-align:left;
-  max-height:120px;
-  overflow:auto;
-}
-</style>
+<title>Accelerometer Client</title>
 </head>
-
 <body>
 
-<div class="card">
+<h2>Accelerometer</h2>
+<p id="live">Waiting sensor...</p>
+<button onclick="start()">Start</button>
+<button onclick="stop()">Stop</button>
 
-<h2>📱 Accelerometer</h2>
-
-<div class="device">
-Device ID:<br>
-<b id="deviceLabel"></b>
-</div>
-
-<div class="sensor" id="live">
-x: 0.00<br>
-y: 0.00<br>
-z: 0.00
-</div>
-
-<button class="start" onclick="start()">Start</button>
-<button class="stop" onclick="stop()">Stop</button>
-<button class="latest" onclick="getLatest()">Get Latest</button>
-
-<div class="status idle" id="status">Idle</div>
-<div class="counter">Collected: <span id="count">0</span></div>
-
-<pre id="latestData"></pre>
-
-</div>
+<h3>Latest from Server</h3>
+<pre id="latest"></pre>
 
 <script>
 const BASE="https://script.google.com/macros/s/AKfycbyPno5YNNW-OslQUov0fXBoOVTQwD-eUyiDYDI-C5ct_SmAhGJusvfgJxZZUXUxDgK9/exec";
+const device_id="dev-"+Math.random().toString(36).substring(2,8);
 
-// ================= DEVICE ID (SAMA DENGAN SCAN) =================
-function getDeviceId(){
-  let id=localStorage.getItem("device_id");
-  if(!id){
-    id="web-"+crypto.randomUUID();
-    localStorage.setItem("device_id",id);
-  }
-  return id;
-}
-const device_id=getDeviceId();
-document.getElementById("deviceLabel").innerText=device_id;
-
-// ================= VAR =================
 let samples=[];
 let timerSend=null;
 let motionHandler=null;
 let isRunning=false;
 
-const live=document.getElementById("live");
-const statusEl=document.getElementById("status");
-const countEl=document.getElementById("count");
-const latestBox=document.getElementById("latestData");
-
 // ================= START =================
-async function start(){
-
+function start(){
   if(isRunning) return;
-
-  if(typeof DeviceMotionEvent==="undefined"){
-    alert("DeviceMotion tidak didukung");
-    return;
-  }
-
-  if(typeof DeviceMotionEvent.requestPermission==="function"){
-    const permission=await DeviceMotionEvent.requestPermission();
-    if(permission!=="granted"){
-      alert("Permission ditolak");
-      return;
-    }
-  }
-
   isRunning=true;
-  statusEl.innerText="Running";
-  statusEl.className="status running";
 
-  motionHandler=e=>{
-    const acc=e.accelerationIncludingGravity;
-    if(!acc) return;
+  motionHandler = e=>{
+    const x=e.accelerationIncludingGravity?.x;
+    const y=e.accelerationIncludingGravity?.y;
+    const z=e.accelerationIncludingGravity?.z;
 
-    const x=acc.x||0;
-    const y=acc.y||0;
-    const z=acc.z||0;
-
-    live.innerHTML=
-`x: ${x.toFixed(2)}<br>
-y: ${y.toFixed(2)}<br>
-z: ${z.toFixed(2)}`;
+    live.innerText=`x:${x?.toFixed(2)} y:${y?.toFixed(2)} z:${z?.toFixed(2)}`;
 
     samples.push({
       t:new Date().toISOString(),
@@ -182,34 +41,33 @@ z: ${z.toFixed(2)}`;
       y:y,
       z:z
     });
-
-    countEl.innerText=samples.length;
   };
 
-  window.addEventListener("devicemotion",motionHandler);
+  window.addEventListener("devicemotion", motionHandler);
+
   timerSend=setInterval(sendBatch,3000);
 }
 
 // ================= STOP =================
 function stop(){
   if(!isRunning) return;
-
   isRunning=false;
+
   clearInterval(timerSend);
+  timerSend=null;
 
-  window.removeEventListener("devicemotion",motionHandler);
+  if(motionHandler){
+    window.removeEventListener("devicemotion", motionHandler);
+    motionHandler=null;
+  }
 
-  statusEl.innerText="Stopped";
-  statusEl.className="status stopped";
-
+  live.innerText="Stopped";
   samples=[];
-  countEl.innerText=0;
 }
 
 // ================= SEND =================
 async function sendBatch(){
-
-  if(samples.length===0) return;
+  if(samples.length==0) return;
 
   const payload={
     device_id:device_id,
@@ -222,37 +80,35 @@ async function sendBatch(){
   try{
     const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
       body:JSON.stringify(payload)
     });
 
     const json=await res.json();
     console.log("POST:",json);
-
   }catch(err){
-    console.log("Send error");
+    console.log("send error",err);
   }
-
-  countEl.innerText=0;
 }
 
 // ================= GET LATEST =================
 async function getLatest(){
   try{
-    const res=await fetch(
-      BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id
-    );
-
+    const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id);
     const json=await res.json();
 
     if(json.ok){
-      latestBox.innerText=JSON.stringify(json.data,null,2);
+      latest.innerText=
+`time: ${json.data.t}
+x: ${json.data.x}
+y: ${json.data.y}
+z: ${json.data.z}`;
     }
-
   }catch(err){
-    console.log("Latest error");
+    console.log("latest error");
   }
 }
+
+setInterval(getLatest,2000);
 </script>
 
 </body>
