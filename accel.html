@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Accelerometer Telemetry</title>
+<title>Accelerometer</title>
 
 <style>
 body{
@@ -17,10 +17,10 @@ body{
 
 .card{
   background:white;
-  padding:28px;
+  padding:30px;
   border-radius:20px;
-  box-shadow:0 12px 35px rgba(0,0,0,0.08);
-  width:340px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.08);
+  width:350px;
   text-align:center;
 }
 
@@ -30,12 +30,19 @@ h2{
 }
 
 .device{
-  font-size:13px;
   background:#f1f5f9;
-  padding:8px;
-  border-radius:10px;
+  padding:10px;
+  border-radius:12px;
+  font-size:13px;
   margin-bottom:15px;
   color:#334155;
+}
+
+.sensor{
+  font-size:18px;
+  font-weight:600;
+  margin:10px 0;
+  color:#0f172a;
 }
 
 button{
@@ -43,34 +50,28 @@ button{
   padding:12px;
   border:none;
   border-radius:12px;
-  background:#6366f1;
-  color:white;
   font-weight:600;
   cursor:pointer;
   margin-bottom:10px;
 }
 
-button.stop{
-  background:#ef4444;
-}
-
-button.secondary{
-  background:#0ea5e9;
-}
+.start{ background:#6366f1; color:white; }
+.stop{ background:#ef4444; color:white; }
+.latest{ background:#0ea5e9; color:white; }
 
 .status{
-  margin-top:10px;
+  margin-top:8px;
   font-weight:600;
 }
 
 .running{ color:#16a34a; }
 .stopped{ color:#ef4444; }
-.idle{ color:#475569; }
+.idle{ color:#64748b; }
 
 .counter{
-  margin-top:5px;
   font-size:14px;
-  color:#475569;
+  color:#64748b;
+  margin-bottom:10px;
 }
 
 pre{
@@ -97,132 +98,159 @@ Device ID:<br>
 <b id="deviceLabel"></b>
 </div>
 
-<button onclick="startAccel()">Start</button>
-<button class="stop" onclick="stopAccel()">Stop</button>
-<button class="secondary" onclick="getLatest()">Get Latest</button>
+<div class="sensor" id="live">
+x: 0.00<br>
+y: 0.00<br>
+z: 0.00
+</div>
+
+<button class="start" onclick="start()">Start</button>
+<button class="stop" onclick="stop()">Stop</button>
+<button class="latest" onclick="getLatest()">Get Latest</button>
 
 <div class="status idle" id="status">Idle</div>
 <div class="counter">Collected: <span id="count">0</span></div>
 
-<pre id="output"></pre>
+<pre id="latestData"></pre>
 
 </div>
 
 <script>
 const BASE="https://script.google.com/macros/s/AKfycbyTPZsVHNWOo176DZBhExkDSzy2cSriBxttIQ4-pp5xbBM_sUSPaMqRk1UofhPxStQ/exec";
 
-// ======================
-// DEVICE ID SAMA DENGAN scan.html
-// ======================
+// ================= DEVICE ID (SAMA DENGAN SCAN) =================
 function getDeviceId(){
-  let id = localStorage.getItem("device_id");
+  let id=localStorage.getItem("device_id");
   if(!id){
-    id = "web-" + crypto.randomUUID();
-    localStorage.setItem("device_id", id);
+    id="web-"+crypto.randomUUID();
+    localStorage.setItem("device_id",id);
   }
   return id;
 }
-const device_id = getDeviceId();
-document.getElementById("deviceLabel").innerText = device_id;
+const device_id=getDeviceId();
+document.getElementById("deviceLabel").innerText=device_id;
 
-// ======================
-let samples = [];
-let motionHandler = null;
-let intervalSender = null;
+// ================= VAR =================
+let samples=[];
+let timerSend=null;
+let motionHandler=null;
+let isRunning=false;
 
-// ======================
-async function startAccel(){
+const live=document.getElementById("live");
+const statusEl=document.getElementById("status");
+const countEl=document.getElementById("count");
+const latestBox=document.getElementById("latestData");
 
-  if(typeof DeviceMotionEvent === "undefined"){
+// ================= START =================
+async function start(){
+
+  if(isRunning) return;
+
+  if(typeof DeviceMotionEvent==="undefined"){
     alert("DeviceMotion tidak didukung");
     return;
   }
 
-  // iOS permission
-  if(typeof DeviceMotionEvent.requestPermission === "function"){
-    const permission = await DeviceMotionEvent.requestPermission();
-    if(permission !== "granted"){
+  if(typeof DeviceMotionEvent.requestPermission==="function"){
+    const permission=await DeviceMotionEvent.requestPermission();
+    if(permission!=="granted"){
       alert("Permission ditolak");
       return;
     }
   }
 
-  samples = [];
-  document.getElementById("status").innerText = "Running";
-  document.getElementById("status").className = "status running";
+  isRunning=true;
+  statusEl.innerText="Running";
+  statusEl.className="status running";
 
-  motionHandler = function(event){
-    const acc = event.accelerationIncludingGravity;
+  motionHandler=e=>{
+    const acc=e.accelerationIncludingGravity;
     if(!acc) return;
 
+    const x=acc.x||0;
+    const y=acc.y||0;
+    const z=acc.z||0;
+
+    live.innerHTML=
+`x: ${x.toFixed(2)}<br>
+y: ${y.toFixed(2)}<br>
+z: ${z.toFixed(2)}`;
+
     samples.push({
-      t: new Date().toISOString(),
-      x: acc.x || 0,
-      y: acc.y || 0,
-      z: acc.z || 0
+      t:new Date().toISOString(),
+      x:x,
+      y:y,
+      z:z
     });
 
-    document.getElementById("count").innerText = samples.length;
+    countEl.innerText=samples.length;
   };
 
-  window.addEventListener("devicemotion", motionHandler);
-  intervalSender = setInterval(sendBatch, 5000);
+  window.addEventListener("devicemotion",motionHandler);
+  timerSend=setInterval(sendBatch,3000);
 }
 
-// ======================
-function stopAccel(){
-  window.removeEventListener("devicemotion", motionHandler);
-  clearInterval(intervalSender);
-  document.getElementById("status").innerText = "Stopped";
-  document.getElementById("status").className = "status stopped";
+// ================= STOP =================
+function stop(){
+  if(!isRunning) return;
+
+  isRunning=false;
+  clearInterval(timerSend);
+
+  window.removeEventListener("devicemotion",motionHandler);
+
+  statusEl.innerText="Stopped";
+  statusEl.className="status stopped";
+
+  samples=[];
+  countEl.innerText=0;
 }
 
-// ======================
+// ================= SEND =================
 async function sendBatch(){
 
-  if(samples.length === 0) return;
+  if(samples.length===0) return;
 
-  const payload = {
-    device_id: device_id,
-    ts: new Date().toISOString(),
-    samples: samples
+  const payload={
+    device_id:device_id,
+    ts:new Date().toISOString(),
+    samples:samples
   };
 
+  samples=[];
+
   try{
-    const res = await fetch(BASE_URL+"?path=/telemetry/accel",{
+    const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify(payload)
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(payload)
     });
 
-    const json = await res.json();
-
-    if(json.ok){
-      samples = [];
-      document.getElementById("count").innerText = 0;
-    }
+    const json=await res.json();
+    console.log("POST:",json);
 
   }catch(err){
-    console.log("Network error");
+    console.log("Send error");
   }
+
+  countEl.innerText=0;
 }
 
-// ======================
+// ================= GET LATEST =================
 async function getLatest(){
   try{
-    const res = await fetch(
+    const res=await fetch(
       BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id
     );
 
-    const json = await res.json();
+    const json=await res.json();
 
-    document.getElementById("output").innerText =
-      JSON.stringify(json,null,2);
+    if(json.ok){
+      latestBox.innerText=JSON.stringify(json.data,null,2);
+    }
 
   }catch(err){
-    console.log("Error get latest");
+    console.log("Latest error");
   }
 }
 </script>
