@@ -1,0 +1,161 @@
+API CONTRACT SIMPLE V1
+
+BASE URL:
+https://script.google.com/macros/s/{DEPLOY_ID}/exec
+
+Semua endpoint menggunakan parameter:
+?path=/endpoint
+
+Format Data: JSON
+Method: GET dan POST
+Response Format: JSON
+
+============================================================
+
+TELEMETRY ACCELEROMETER
+============================================================
+
+1.1 POST /telemetry/accel
+Fungsi: Mengirim batch data accelerometer
+
+Request Body:
+{
+"device_id": "dev-ab12cd",
+"ts": "2026-03-01T14:22:10.123Z",
+"samples": [
+{
+"t": "2026-03-01T14:22:08.111Z",
+"x": 0.12,
+"y": -0.45,
+"z": 9.81
+}
+]
+}
+
+Response Success:
+{
+"ok": true,
+"received": 10
+}
+
+Response Error:
+{
+"ok": false,
+"error": "Invalid payload"
+}
+
+1.2 GET /telemetry/accel/latest
+Fungsi: Mengambil data accelerometer terbaru
+
+Query Parameter:
+device_id
+
+Contoh Request:
+?path=/telemetry/accel/latest&device_id=dev-ab12cd
+
+Response:
+{
+"ok": true,
+"data": {
+"t": "2026-03-01T14:22:08.111Z",
+"x": 0.12,
+"y": -0.45,
+"z": 9.81
+}
+}
+
+============================================================
+2. TELEMETRY GPS
+
+2.1 POST /telemetry/gps
+Fungsi: Mengirim data lokasi GPS
+
+Request Body:
+{
+"device_id": "dev-ab12cd",
+"ts": "2026-03-01T14:25:00.000Z",
+"lat": -7.2575,
+"lng": 112.7521,
+"accuracy_m": 5
+}
+
+Response:
+{
+"ok": true
+}
+
+2.2 GET /telemetry/gps/history
+Fungsi: Mengambil riwayat GPS
+
+Query Parameter:
+device_id
+limit (optional)
+
+Contoh Request:
+?path=/telemetry/gps/history&device_id=dev-ab12cd&limit=100
+
+Response:
+{
+"ok": true,
+"data": {
+"items": [
+{
+"lat": -7.2575,
+"lng": 112.7521,
+"ts": "2026-03-01T14:25:00.000Z"
+}
+]
+}
+}
+
+============================================================
+3. PRESENCE CHECK-IN (QR)
+
+3.1 POST /presence/checkin
+Fungsi: Melakukan presensi melalui QR code
+
+Request Body:
+{
+"user_id": "220411100123",
+"device_id": "web-x1y2z3",
+"course_id": "IF101",
+"session_id": "S1",
+"qr_token": "abc123token",
+"ts": "2026-03-01T14:30:00.000Z"
+}
+
+Response Success:
+{
+"ok": true,
+"message": "Check-in success"
+}
+
+Response Error:
+{
+"ok": false,
+"error": "QR token invalid or expired"
+}
+
+============================================================
+STANDARD RESPONSE FORMAT V1
+
+Success Format:
+{
+"ok": true,
+"data": {}
+}
+
+Error Format:
+{
+"ok": false,
+"error": "Error message"
+}
+
+============================================================
+RINGKASAN ENDPOINT
+
+POST /telemetry/accel
+GET /telemetry/accel/latest
+POST /telemetry/gps
+GET /telemetry/gps/history
+POST /presence/checkin
