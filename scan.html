@@ -115,7 +115,7 @@ button{
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycby0DQbTLXa7pWmeqbOmdpttbjmbdq8r1e6tnCHDOkaFY9ED7AlfSzjWLGPDdZAGeV3W/exec";
+const BASE="https://script.google.com/macros/s/AKfycbza_xcaWTpYJSzJDTBokNSt5JrFpT-NCjiMnoYeVZhN5H4kI7iRlgtfQurVrX9aJve0/exec";
 
 // DOM
 const loginBox = document.getElementById("loginBox");
@@ -209,8 +209,8 @@ function startScanner(){
     { facingMode:"environment" },
     { fps:10, qrbox: size * 0.75 },
     text=>{
-      scanner.stop();
-      location.href = text;
+      // scanner.stop();
+      // location.href = text;
     }
   );
 }
