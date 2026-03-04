@@ -3,23 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <title>GPS Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <style>
-#map{height:400px;}
+*{box-sizing:border-box;}
+
+html,body{
+  width:100%;
+  height:100%;
+  margin:0;
+}
+
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:16px;
+}
+
+.card{
+  background:white;
+  padding:24px 20px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  width:100%;
+  max-width:500px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  text-align:center;
+}
+
+h2{
+  margin:0;
+  color:#1e293b;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#6366f1;
+  color:white;
+  font-weight:600;
+  font-size:16px;
+  cursor:pointer;
+}
+
+button:hover{ background:#4f46e5; }
+
+#status{
+  font-size:14px;
+  font-weight:600;
+  color:#334155;
+  min-height:18px;
+}
+
+#map{
+  width:100%;
+  height:300px;
+  border-radius:12px;
+  overflow:hidden;
+}
 </style>
 </head>
 
 <body>
 
-<h2>GPS Tracking</h2>
-<button onclick="start()">Start Tracking</button>
-<p id="status"></p>
-
-<div id="map"></div>
+<div class="card">
+  <h2>GPS Tracking</h2>
+  <button onclick="start()">Start Tracking</button>
+  <div id="status">Menunggu GPS...</div>
+  <div id="map"></div>
+</div>
 
 <script>
-const BASE_URL="https://script.google.com/macros/s/AKfycbytvsRFhjR45af_ly5AiHv-c2gPJ5oRADjfREgFDHB3N2VTn5NBcY7Q3CW8XcVv10qY/exec"; // ganti
+const BASE_URL="https://script.google.com/macros/s/AKfycbzumJol1nNaVW9duf8ylbFW7CoJvMFw4xt9geUr9p0ehFq02bJV2J5aWqXGMxYYg7wf/exec";
 const device_id="dev-"+Math.random().toString(36).substring(2,8);
 
 let map=L.map("map").setView([-7.25,112.75],13);
@@ -27,6 +92,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 let marker=null;
 let polyline=L.polyline([],{color:"blue"}).addTo(map);
+let watchId=null;
 
 // ================= GPS =================
 function start(){
@@ -35,12 +101,14 @@ function start(){
     return;
   }
 
-  navigator.geolocation.watchPosition(pos=>{
+  status.innerText="Mengambil lokasi...";
+
+  watchId = navigator.geolocation.watchPosition(pos=>{
     const lat=pos.coords.latitude;
     const lng=pos.coords.longitude;
     const acc=pos.coords.accuracy;
 
-    status.innerText=`Lat:${lat} Lng:${lng}`;
+    status.innerText=`Lat:${lat.toFixed(5)} Lng:${lng.toFixed(5)}`;
 
     sendGPS(lat,lng,acc);
     updateMap(lat,lng);
@@ -74,12 +142,13 @@ async function sendGPS(lat,lng,acc){
 function updateMap(lat,lng){
   if(!marker){
     marker=L.marker([lat,lng]).addTo(map);
+    map.setView([lat,lng],16);
   }else{
     marker.setLatLng([lat,lng]);
   }
 }
 
-// ================= HISTORY (POLYLINE) =================
+// ================= HISTORY =================
 async function loadHistory(){
   const res=await fetch(BASE_URL+"?path=/telemetry/gps/history&device_id="+device_id+"&limit=100");
   const json=await res.json();
