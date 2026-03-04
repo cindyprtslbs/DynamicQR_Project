@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Accelerometer Client</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -20,20 +22,20 @@ body{
   padding:32px;
   border-radius:18px;
   box-shadow:0 10px 30px rgba(0,0,0,0.08);
-  width:340px;
+  width:360px;
   text-align:center;
 }
 
 h2{
   margin-top:0;
-  margin-bottom:20px;
+  margin-bottom:16px;
   color:#1e293b;
 }
 
 #live{
   font-size:14px;
   color:#475569;
-  margin-bottom:16px;
+  margin-bottom:14px;
   padding:10px;
   background:#f8fafc;
   border-radius:10px;
@@ -43,7 +45,7 @@ h2{
 .buttons{
   display:flex;
   gap:10px;
-  margin-bottom:18px;
+  margin-bottom:16px;
 }
 
 button{
@@ -56,24 +58,14 @@ button{
   font-size:15px;
   font-weight:600;
   cursor:pointer;
-  transition:0.25s;
-}
-
-button:hover{
-  background:#4f46e5;
-  transform:translateY(-1px);
-}
-
-button:active{
-  transform:translateY(0);
 }
 
 button.stop{
   background:#ef4444;
 }
 
-button.stop:hover{
-  background:#dc2626;
+canvas{
+  margin:10px 0;
 }
 
 h3{
@@ -106,12 +98,15 @@ pre{
     <button class="stop" onclick="stop()">Stop</button>
   </div>
 
+  <!-- GRAFIK -->
+  <canvas id="chart" height="160"></canvas>
+
   <h3>Latest from Server</h3>
   <pre id="latest">-</pre>
 </div>
 
 <script>
-const BASE_URL="https://script.google.com/macros/s/AKfycbzumJol1nNaVW9duf8ylbFW7CoJvMFw4xt9geUr9p0ehFq02bJV2J5aWqXGMxYYg7wf/exec"; 
+const BASE_URL="https://script.google.com/macros/s/AKfycby0DQbTLXa7pWmeqbOmdpttbjmbdq8r1e6tnCHDOkaFY9ED7AlfSzjWLGPDdZAGeV3W/exec"; 
 const device_id="dev-"+Math.random().toString(36).substring(2,8);
 
 let samples=[];
@@ -119,12 +114,54 @@ let timerSend=null;
 let motionHandler=null;
 let isRunning=false;
 
+// throttle sampling (max 5 data/detik)
+let lastSampleTime = 0;
+
+// ====== CHART ======
+const ctx = document.getElementById("chart").getContext("2d");
+const chart = new Chart(ctx,{
+  type:"line",
+  data:{
+    labels:[],
+    datasets:[
+      {label:"X", borderColor:"red", data:[], tension:0.3},
+      {label:"Y", borderColor:"green", data:[], tension:0.3},
+      {label:"Z", borderColor:"blue", data:[], tension:0.3}
+    ]
+  },
+  options:{
+    responsive:true,
+    animation:false,
+    scales:{ y:{ min:-20, max:20 } }
+  }
+});
+
+function updateChart(x,y,z){
+  const t = new Date().toLocaleTimeString();
+
+  chart.data.labels.push(t);
+  chart.data.datasets[0].data.push(x);
+  chart.data.datasets[1].data.push(y);
+  chart.data.datasets[2].data.push(z);
+
+  if(chart.data.labels.length>30){
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(d=>d.data.shift());
+  }
+
+  chart.update();
+}
+
 // ================= START =================
 function start(){
   if(isRunning) return;
   isRunning=true;
 
   motionHandler = e=>{
+    const now = Date.now();
+    if(now - lastSampleTime < 200) return; // 200ms = 5x per detik
+    lastSampleTime = now;
+
     const acc = e.accelerationIncludingGravity;
     if(!acc) return;
 
@@ -133,6 +170,8 @@ function start(){
     const z=acc.z;
 
     live.innerText=`x:${x.toFixed(2)} y:${y.toFixed(2)} z:${z.toFixed(2)}`;
+
+    updateChart(x,y,z);
 
     samples.push({
       t:new Date().toISOString(),
@@ -144,7 +183,7 @@ function start(){
 
   window.addEventListener("devicemotion", motionHandler);
 
-  timerSend=setInterval(sendBatch,5000);
+  timerSend=setInterval(sendBatch,5000); // batch tiap 5 detik
 }
 
 // ================= STOP =================
