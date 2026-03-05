@@ -26,196 +26,192 @@ body{
 
 .card{
   background:white;
-  padding:16px;
+  padding:24px;
   border-radius:18px;
   box-shadow:0 10px 30px rgba(0,0,0,0.08);
   width:100%;
-  max-width:480px;
+  max-width:400px;
   text-align:center;
   display:flex;
   flex-direction:column;
-  gap:12px;
+  gap:16px;
 }
 
 h2{ 
   color:#1e293b; 
   margin:0;
+  font-size: 1.25rem;
 }
 
-/* READER BESAR */
 #reader{
   width:100%;
   aspect-ratio:1/1;
   border-radius:12px;
   overflow:hidden;
-}
-
-/* paksa video penuh */
-#reader video{
-  width:100% !important;
-  height:100% !important;
-  object-fit:cover !important;
+  background: #f1f5f9;
 }
 
 input{
   width:100%;
-  padding:12px;
+  padding:14px;
   border-radius:10px;
-  border:1px solid #e2e8f0;
+  border:2px solid #e2e8f0;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #6366f1;
 }
 
 button{
   width:100%;
-  padding:12px;
+  padding:14px;
   border:none;
   border-radius:12px;
   background:#6366f1;
   color:white;
   font-weight:600;
+  font-size: 1rem;
   cursor:pointer;
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 #status{
   margin-top:8px;
   font-weight:600;
+  min-height: 1.5em;
 }
 
-.loading{ color:#0f172a; }
+.loading{ color:#64748b; }
 .success{ color:#16a34a; }
 .error{ color:#dc2626; }
-
-/* MOBILE OPTIMIZATION */
-@media (max-width:480px){
-  body{
-    align-items:flex-start;
-  }
-  .card{
-    margin-top:16px;
-  }
-}
 </style>
 </head>
 
 <body>
 
 <div class="card">
+  <h2>📷 Presensi Mahasiswa</h2>
 
-<h2>📷 Scan QR Presensi</h2>
+  <div id="loginBox">
+    <p style="color: #64748b; font-size: 0.9rem; margin-top: 0;">Silakan masukkan NIM untuk memulai</p>
+    <input id="nimInput" type="text" placeholder="Masukkan NIM (Contoh: 2023xxxx)" autofocus>
+    <button onclick="startProcess()">Buka Kamera</button>
+  </div>
 
-<div id="loginBox">
-  <input id="nimInput" placeholder="Masukkan NIM">
-  <button onclick="saveNIM()">Mulai Scan</button>
-</div>
-
-<div id="scanBox" style="display:none;">
-  <div id="reader"></div>
-  <div id="status" class="loading">Siapkan kamera...</div>
-</div>
-
+  <div id="scanBox" style="display:none;">
+    <div id="reader"></div>
+    <div id="status" class="loading">Inisialisasi kamera...</div>
+    <button onclick="resetView()" style="background: #94a3b8; margin-top: 8px;">Ganti NIM / Batal</button>
+  </div>
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycbwsk76OyQwcqVcMMc6QjRn7IYPqcbU_7HzGFREEPEGuMwVD6F0u6rMZijhrqm4FDI8A/exec";
+// Base URL sesuai kontrak API Contract Simple v1 [cite: 52, 271]
+const BASE="https://script.google.com/macros/s/AKfycbxlwUlQQXQDYzeC_eIHPTD5sU0rF44ZtHgUHOIuywz5ThXUzXIU55PM6D9cLVDVyJvA/exec";
 
-// DOM
 const loginBox = document.getElementById("loginBox");
 const scanBox  = document.getElementById("scanBox");
 const nimInput = document.getElementById("nimInput");
 const statusEl = document.getElementById("status");
 
-// PARAM
-function param(n){
+// Ambil parameter dari URL (token, course, session) [cite: 131, 132, 133]
+function getParam(n){
   return new URL(location.href).searchParams.get(n);
 }
-const token   = param("token");
-const course  = param("course");
-const session = param("session");
 
-// USER
-let user_id = localStorage.getItem("nim");
-const device_id = "web-" + Math.random().toString(36).substring(2,8);
+const urlToken   = getParam("token");
+const urlCourse  = getParam("course");
+const urlSession = getParam("session");
 
-// INIT
-if(user_id){
-  loginBox.style.display="none";
-  scanBox.style.display="block";
+let userId = "";
+const deviceId = "web-" + Math.random().toString(36).substring(2,8); // Identitas minimal device_id [cite: 61, 98]
 
-  if(token){
-    checkin();
-  }else{
-    startScanner();
-  }
-}
-
-// SAVE NIM
-function saveNIM(){
+function startProcess(){
   const nim = nimInput.value.trim();
   if(!nim){
-    alert("NIM wajib diisi");
+    alert("NIM wajib diisi!");
     return;
   }
 
-  user_id = nim;
-  localStorage.setItem("nim", nim);
-
+  userId = nim;
   loginBox.style.display="none";
   scanBox.style.display="block";
 
-  if(token){
-    checkin();
-  }else{
-    startScanner();
+  // Jika URL sudah membawa token, langsung eksekusi check-in [cite: 124]
+  if(urlToken && urlCourse && urlSession){
+    executeCheckin(urlToken, urlCourse, urlSession);
+  } else {
+    initScanner();
   }
 }
 
-// CHECKIN
-async function checkin(){
-  setStatus("⏳ Mengirim presensi...", "loading");
+async function executeCheckin(scannedToken, courseId, sessionId){
+  setStatus("⏳ Mengirim data presensi...", "loading");
 
-  try{
-    const res = await fetch(BASE+"?path=/presence/checkin",{
-      method:"POST",
-      body:JSON.stringify({
-        user_id:user_id,
-        device_id:device_id,
-        course_id:course,
-        session_id:session,
-        qr_token:token,
-        ts:new Date().toISOString()
-      })
+  try {
+    const payload = {
+      user_id: userId,
+      device_id: deviceId,
+      course_id: courseId,
+      session_id: sessionId,
+      qr_token: scannedToken,
+      ts: new Date().toISOString() // Format ISO-8601 sesuai kontrak [cite: 57, 134]
+    };
+
+    const res = await fetch(`${BASE}?path=/presence/checkin`, {
+      method: "POST",
+      body: JSON.stringify(payload)
     });
 
     const json = await res.json();
 
     if(json.ok){
       setStatus("✅ PRESENSI BERHASIL", "success");
+      // Feedback suara sukses
       new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg").play();
-    }else{
-      setStatus("❌ "+json.error, "error");
+    } else {
+      // Menangani error seperti token_expired atau already_checked_in [cite: 79, 142]
+      setStatus("❌ " + (json.error || "Gagal Presensi"), "error");
     }
-
-  }catch(err){
-    setStatus("❌ Gagal koneksi server", "error");
+  } catch (err) {
+    setStatus("❌ Gagal terhubung ke server", "error");
   }
 }
 
-// SCANNER
-function startScanner(){
-  const scanner = new Html5Qrcode("reader");
+function initScanner(){
+  const html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-  const size = Math.min(window.innerWidth * 0.9, 360);
-
-  scanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox: size * 0.75 },
-    text=>{
-      scanner.stop();
-      location.href = text;
+  html5QrCode.start(
+    { facingMode: "environment" }, 
+    config,
+    (decodedText) => {
+      // Hentikan kamera setelah scan berhasil
+      html5QrCode.stop().then(() => {
+        // Arahkan ke URL di dalam QR yang sudah membawa parameter token
+        // URL ini akan memicu executeCheckin saat halaman reload/redirect
+        location.href = decodedText; 
+      });
+    },
+    (errorMessage) => {
+      // Update status saat mencari QR
+      setStatus("Mencari kode QR...", "loading");
     }
-  );
+  ).catch(err => {
+    setStatus("❌ Kamera tidak diizinkan atau tidak ditemukan", "error");
+  });
 }
 
-// STATUS
+function resetView(){
+  location.reload(); // Reset semua state termasuk input NIM
+}
+
 function setStatus(text, type){
   statusEl.innerText = text;
   statusEl.className = type;
