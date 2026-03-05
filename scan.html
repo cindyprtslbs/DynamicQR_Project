@@ -7,44 +7,65 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+*{
+  box-sizing:border-box;
+  font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
 body{
-  font-family: system-ui;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  background:linear-gradient(135deg,#6366f1,#818cf8);
+  min-height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
-  min-height:100vh;
   margin:0;
+  padding:15px;
 }
 
 .container{
-  background:white;
-  padding:20px;
-  border-radius:18px;
+  background:#fff;
   width:100%;
-  max-width:380px;
-  box-shadow:0 10px 20px rgba(0,0,0,.1);
+  max-width:400px;
+  padding:20px;
+  border-radius:20px;
+  box-shadow:0 15px 30px rgba(0,0,0,.2);
   text-align:center;
 }
 
-input, button{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  margin-top:10px;
-  font-size:16px;
+h2{
+  margin-bottom:15px;
+  color:#1e293b;
 }
 
 input{
-  border:1.5px solid #e2e8f0;
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1.5px solid #cbd5f5;
+  font-size:16px;
+  outline:none;
+}
+
+input:focus{
+  border-color:#6366f1;
 }
 
 button{
-  background:#6366f1;
-  color:white;
+  width:100%;
+  padding:14px;
+  margin-top:12px;
   border:none;
+  border-radius:12px;
+  background:#6366f1;
+  color:#fff;
+  font-size:16px;
   font-weight:600;
   cursor:pointer;
+  transition:.2s;
+}
+
+button:hover{
+  background:#4f46e5;
 }
 
 #reader{
@@ -52,19 +73,26 @@ button{
   border-radius:14px;
   overflow:hidden;
   display:none;
+  border:2px dashed #c7d2fe;
 }
 
 .badge{
-  margin-top:12px;
-  padding:10px;
-  border-radius:20px;
+  margin-top:15px;
+  padding:12px;
+  border-radius:999px;
   font-weight:600;
   display:none;
+  animation:fade .3s ease-in-out;
 }
 
 .success{background:#dcfce7;color:#166534;}
 .error{background:#fee2e2;color:#991b1b;}
 .warning{background:#fef3c7;color:#92400e;}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(-5px);}
+  to{opacity:1;transform:translateY(0);}
+}
 </style>
 </head>
 
@@ -74,7 +102,7 @@ button{
 
   <input id="nimInput" placeholder="Masukkan NIM">
 
-  <button onclick="startScanner()">Scan QR</button>
+  <button onclick="startScanner()">📸 Scan QR</button>
 
   <div id="reader"></div>
 
@@ -111,7 +139,7 @@ function startScanner(){
 
   html5QrCode.start(
     { facingMode:"environment" },
-    { fps:10, qrbox:250 },
+    { fps:10, qrbox:{width:250,height:250} },
     onScanSuccess
   ).catch(()=>{
     showBadge("❌ Kamera tidak bisa dibuka","error");
