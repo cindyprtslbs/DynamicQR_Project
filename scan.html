@@ -116,6 +116,10 @@ const reader=document.getElementById("reader");
 const badge=document.getElementById("statusBadge");
 const nimInput=document.getElementById("nimInput");
 
+nimInput.addEventListener("input", ()=>{
+  badge.style.display="none";
+});
+
 const deviceId="web-"+Math.random().toString(36).substr(2,6);
 let html5QrCode;
 let lastScan="";
@@ -131,6 +135,15 @@ function startScanner(){
   if(!nim){
     showBadge("❌ Isi NIM dulu","error");
     return;
+  }
+
+  // RESET STATUS
+  badge.style.display = "none";
+  lastScan = "";
+
+  // STOP scanner lama jika ada
+  if(html5QrCode){
+    html5QrCode.stop().catch(()=>{});
   }
 
   reader.style.display="block";
