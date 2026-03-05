@@ -1,146 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Presensi Mahasiswa</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan Presensi</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body{
   font-family: system-ui;
-  background:#f1f5f9;
+  background: linear-gradient(135deg,#eef2ff,#f8fafc);
   display:flex;
   justify-content:center;
   align-items:center;
-  height:100vh;
+  min-height:100vh;
+  margin:0;
 }
 
-.card{
+.container{
   background:white;
   padding:20px;
-  border-radius:16px;
+  border-radius:18px;
   width:100%;
-  max-width:400px;
-  box-shadow:0 10px 30px rgba(0,0,0,.1);
-  display:flex;
-  flex-direction:column;
-  gap:12px;
+  max-width:380px;
+  box-shadow:0 10px 20px rgba(0,0,0,.1);
+  text-align:center;
+}
+
+input, button{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  margin-top:10px;
+  font-size:16px;
 }
 
 input{
-  padding:12px;
-  border-radius:10px;
-  border:2px solid #e5e7eb;
-  font-size:1rem;
+  border:1.5px solid #e2e8f0;
+}
+
+button{
+  background:#6366f1;
+  color:white;
+  border:none;
+  font-weight:600;
+  cursor:pointer;
 }
 
 #reader{
-  width:100%;
-  aspect-ratio:1/1;
-  border-radius:12px;
+  margin-top:15px;
+  border-radius:14px;
   overflow:hidden;
+  display:none;
 }
 
-#status{
-  text-align:center;
-  font-weight:bold;
-  min-height:24px;
+.badge{
+  margin-top:12px;
+  padding:10px;
+  border-radius:20px;
+  font-weight:600;
+  display:none;
 }
 
-.success{color:#16a34a;}
-.error{color:#dc2626;}
-.loading{color:#64748b;}
+.success{background:#dcfce7;color:#166534;}
+.error{background:#fee2e2;color:#991b1b;}
+.warning{background:#fef3c7;color:#92400e;}
 </style>
 </head>
 
 <body>
-<div class="card">
-  <h3>📷 Presensi Mahasiswa</h3>
+<div class="container">
+  <h2>📷 Presensi Mahasiswa</h2>
 
-  <!-- NIM -->
   <input id="nimInput" placeholder="Masukkan NIM">
 
-  <!-- Camera -->
+  <button onclick="startScanner()">Scan QR</button>
+
   <div id="reader"></div>
 
-  <!-- Status -->
-  <div id="status" class="loading">Menunggu QR...</div>
+  <div id="statusBadge" class="badge"></div>
 </div>
 
 <script>
 const BASE="https://script.google.com/macros/s/AKfycbxlwUlQQXQDYzeC_eIHPTD5sU0rF44ZtHgUHOIuywz5ThXUzXIU55PM6D9cLVDVyJvA/exec";
 
-const nimInput = document.getElementById("nimInput");
-const statusEl = document.getElementById("status");
+const reader=document.getElementById("reader");
+const badge=document.getElementById("statusBadge");
+const nimInput=document.getElementById("nimInput");
 
-const deviceId = "web-"+Math.random().toString(36).substr(2,6);
-let lastScan = "";
+const deviceId="web-"+Math.random().toString(36).substr(2,6);
+let html5QrCode;
+let lastScan="";
 
-function setStatus(msg,type){
-  statusEl.innerText = msg;
-  statusEl.className = type;
+function showBadge(text,type){
+  badge.className="badge "+type;
+  badge.innerText=text;
+  badge.style.display="block";
 }
 
-const qr = new Html5Qrcode("reader");
+function startScanner(){
+  const nim = nimInput.value.trim();
+  if(!nim){
+    showBadge("❌ Isi NIM dulu","error");
+    return;
+  }
 
-qr.start(
-  { facingMode:"environment" },
-  { fps:10, qrbox:250 },
-  async (decodedText) => {
+  reader.style.display="block";
 
-    // cegah scan double cepat
-    if(decodedText === lastScan) return;
-    lastScan = decodedText;
+  html5QrCode = new Html5Qrcode("reader");
 
-    const nim = nimInput.value.trim();
-    if(!nim){
-      setStatus("❌ Isi NIM dulu", "error");
-      return;
+  html5QrCode.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:250 },
+    onScanSuccess
+  ).catch(()=>{
+    showBadge("❌ Kamera tidak bisa dibuka","error");
+  });
+}
+
+async function onScanSuccess(decodedText){
+  if(decodedText===lastScan) return;
+  lastScan = decodedText;
+
+  try{
+    const url=new URL(decodedText);
+    const token=url.searchParams.get("token");
+    const course=url.searchParams.get("course");
+    const session=url.searchParams.get("session");
+
+    const payload={
+      user_id:nimInput.value,
+      device_id:deviceId,
+      course_id:course,
+      session_id:session,
+      qr_token:token,
+      ts:new Date().toISOString()
+    };
+
+    const res=await fetch(`${BASE}?path=/presence/checkin`,{
+      method:"POST",
+      body:JSON.stringify(payload)
+    });
+
+    const json=await res.json();
+
+    if(json.ok){
+      showBadge("✅ Presence Success","success");
+    }else if(json.error==="qr_expired"){
+      showBadge("⚠️ QR Expired","warning");
+    }else{
+      showBadge("❌ Presence Invalid","error");
     }
 
-    try{
-      const url = new URL(decodedText);
-      const token = url.searchParams.get("token");
-      const course = url.searchParams.get("course");
-      const session = url.searchParams.get("session");
+  }catch{
+    showBadge("❌ QR tidak valid","error");
+  }
 
-      const payload = {
-        user_id: nim,
-        device_id: deviceId,
-        course_id: course,
-        session_id: session,
-        qr_token: token,
-        ts: new Date().toISOString()
-      };
-
-      setStatus("⏳ Mengirim presensi...", "loading");
-
-      const res = await fetch(`${BASE}?path=/presence/checkin`,{
-        method:"POST",
-        body: JSON.stringify(payload)
-      });
-
-      const json = await res.json();
-
-      if(json.ok){
-        setStatus("✅ Presence Success", "success");
-      }else if(json.error==="qr_expired"){
-        setStatus("⚠️ QR Expired", "error");
-      }else{
-        setStatus("❌ Presence Invalid", "error");
-      }
-
-    }catch(e){
-      setStatus("❌ QR tidak valid", "error");
-    }
-
-    // reset supaya bisa scan QR lain
-    setTimeout(()=> lastScan="", 3000);
-  },
-  ()=>{}
-).catch(()=>{
-  setStatus("❌ Kamera tidak bisa dibuka", "error");
-});
+  setTimeout(()=>lastScan="",3000);
+}
 </script>
 </body>
 </html>
