@@ -187,8 +187,12 @@ async function onScanSuccess(decodedText){
 
     if(json.ok){
       showBadge("✅ Presence Success","success");
-    }else if(json.error==="qr_expired"){
+    }else if(json.error==="token_expired"){
       showBadge("⚠️ QR Expired","warning");
+    }else if(json.error==="already_checked_in"){
+      showBadge("⚠️ Sudah presensi","warning");
+    }else if(json.error==="invalid_session"){
+      showBadge("❌ Session tidak cocok","error");
     }else{
       showBadge("❌ Presence Invalid","error");
     }
