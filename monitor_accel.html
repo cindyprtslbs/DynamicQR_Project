@@ -9,39 +9,97 @@
 <style>
 
 body{
-font-family:system-ui;
-background:#f1f5f9;
+font-family:system-ui,-apple-system;
+background:linear-gradient(135deg,#eef2ff,#f8fafc);
 margin:0;
-padding:20px;
-}
-
-h1{
-text-align:center;
-}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-gap:20px;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
 }
 
 .card{
+
+width:850px;
 background:white;
-padding:20px;
-border-radius:14px;
-box-shadow:0 8px 20px rgba(0,0,0,0.08);
+padding:30px;
+border-radius:16px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+.title{
+font-size:22px;
+font-weight:700;
+color:#1e293b;
+}
+
+.controls{
+display:flex;
+gap:10px;
+}
+
+input{
+padding:10px 12px;
+border-radius:10px;
+border:1px solid #e2e8f0;
+font-size:14px;
+}
+
+button{
+padding:10px 16px;
+border:none;
+border-radius:10px;
+background:#6366f1;
+color:white;
+font-weight:600;
+cursor:pointer;
 }
 
 .status{
-font-weight:bold;
-margin-bottom:10px;
+font-size:14px;
+font-weight:600;
+margin-top:10px;
 }
 
-.active{color:green}
-.offline{color:gray}
+.active{color:#16a34a}
+.offline{color:#64748b}
+
+.sensor-grid{
+display:grid;
+grid-template-columns:1fr 1fr 1fr;
+gap:12px;
+margin-top:16px;
+}
+
+.sensor{
+background:#f8fafc;
+padding:14px;
+border-radius:12px;
+text-align:center;
+box-shadow:inset 0 0 0 1px #e2e8f0;
+}
+
+.sensor-title{
+font-size:12px;
+color:#64748b;
+margin-bottom:4px;
+}
+
+.sensor-value{
+font-size:20px;
+font-weight:700;
+}
 
 canvas{
-height:150px;
+margin-top:25px;
 }
 
 </style>
@@ -49,103 +107,103 @@ height:150px;
 
 <body>
 
-<h1>Accelerometer Monitor</h1>
+<div class="card">
 
-<div class="grid" id="devices"></div>
+<div class="header">
+
+<div class="title">Accelerometer Monitor</div>
+
+<div class="controls">
+<input id="deviceInput" value="dev-001">
+<button onclick="startMonitor()">Monitor</button>
+</div>
+
+</div>
+
+<div id="status" class="status">Waiting device...</div>
+
+<div class="sensor-grid">
+
+<div class="sensor">
+<div class="sensor-title">X Axis</div>
+<div id="xVal" class="sensor-value">0</div>
+</div>
+
+<div class="sensor">
+<div class="sensor-title">Y Axis</div>
+<div id="yVal" class="sensor-value">0</div>
+</div>
+
+<div class="sensor">
+<div class="sensor-title">Z Axis</div>
+<div id="zVal" class="sensor-value">0</div>
+</div>
+
+</div>
+
+<canvas id="chart" height="120"></canvas>
+
+</div>
 
 <script>
 
 const BASE_URL="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec";
 
-const devices={};
+let device="";
+let lastUpdate=0;
 
-function createCard(device){
+const chart=new Chart(document.getElementById("chart"),{
 
-const container=document.getElementById("devices");
-
-const div=document.createElement("div");
-div.className="card";
-div.id="card-"+device;
-
-div.innerHTML=`
-
-<h3>${device}</h3>
-
-<div class="status" id="status-${device}">Waiting...</div>
-
-<canvas id="chart-${device}"></canvas>
-
-`;
-
-container.appendChild(div);
-
-const ctx=document.getElementById("chart-"+device).getContext("2d");
-
-devices[device]={
-
-chart:new Chart(ctx,{
 type:"line",
+
 data:{
 labels:[],
 datasets:[
-{label:"X",borderColor:"red",data:[]},
-{label:"Y",borderColor:"green",data:[]},
-{label:"Z",borderColor:"blue",data:[]}
+{label:"X",borderColor:"#ef4444",data:[],pointRadius:0},
+{label:"Y",borderColor:"#22c55e",data:[],pointRadius:0},
+{label:"Z",borderColor:"#3b82f6",data:[],pointRadius:0}
 ]
 },
+
 options:{
 animation:false,
+responsive:true,
 scales:{y:{min:-20,max:20}}
 }
-}),
-
-lastUpdate:0
-
-};
-
-}
-
-function updateChart(device,x,y,z){
-
-const dev=devices[device];
-
-const t=new Date().toLocaleTimeString();
-
-dev.chart.data.labels.push(t);
-
-dev.chart.data.datasets[0].data.push(x);
-dev.chart.data.datasets[1].data.push(y);
-dev.chart.data.datasets[2].data.push(z);
-
-if(dev.chart.data.labels.length>20){
-
-dev.chart.data.labels.shift();
-dev.chart.data.datasets.forEach(d=>d.data.shift());
-
-}
-
-dev.chart.update();
-
-dev.lastUpdate=Date.now();
-
-}
-
-async function fetchData(){
-
-const res=await fetch(BASE_URL+"?path=/telemetry/accel/history&limit=50");
-const json=await res.json();
-
-if(!json.ok) return;
-
-json.data.items.forEach(item=>{
-
-const device=item.device_id;
-
-if(!devices[device]) createCard(device);
-
-updateChart(device,item.x,item.y,item.z);
 
 });
+
+function startMonitor(){
+
+device=document.getElementById("deviceInput").value.trim();
+
+chart.data.labels=[];
+chart.data.datasets.forEach(d=>d.data=[]);
+
+chart.update("none");
+
+}
+
+function updateChart(x,y,z){
+
+document.getElementById("xVal").innerText=x.toFixed(2);
+document.getElementById("yVal").innerText=y.toFixed(2);
+document.getElementById("zVal").innerText=z.toFixed(2);
+
+chart.data.labels.push(Date.now());
+
+chart.data.datasets[0].data.push(x);
+chart.data.datasets[1].data.push(y);
+chart.data.datasets[2].data.push(z);
+
+if(chart.data.labels.length>25){
+chart.data.labels.shift();
+chart.data.datasets.forEach(d=>d.data.shift());
+}
+
+chart.update("none");
+
+lastUpdate=Date.now();
 
 updateStatus();
 
@@ -153,31 +211,49 @@ updateStatus();
 
 function updateStatus(){
 
-Object.keys(devices).forEach(device=>{
+const diff=(Date.now()-lastUpdate)/1000;
 
-const last=devices[device].lastUpdate;
+const el=document.getElementById("status");
 
-const diff=(Date.now()-last)/1000;
+if(diff<5){
 
-const el=document.getElementById("status-"+device);
-
-if(diff<10){
-
-el.innerHTML="● ACTIVE";
+el.innerHTML="● Device ACTIVE";
 el.className="status active";
 
 }else{
 
-el.innerHTML="● OFFLINE";
+el.innerHTML="● Device OFFLINE";
 el.className="status offline";
 
 }
 
+}
+
+async function fetchData(){
+
+if(!device) return;
+
+try{
+
+const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device,{
+cache:"no-store"
 });
+
+const json=await res.json();
+
+if(!json.ok || !json.data) return;
+
+const x=Number(json.data.x);
+const y=Number(json.data.y);
+const z=Number(json.data.z);
+
+updateChart(x,y,z);
+
+}catch(e){}
 
 }
 
-setInterval(fetchData,2000);
+setInterval(fetchData,150);
 
 </script>
 
