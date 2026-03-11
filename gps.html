@@ -19,8 +19,8 @@ html,body{
 }
 
 body{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:linear-gradient(135deg,#eef2ff,#f8fafc);
   display:flex;
   justify-content:center;
   align-items:center;
@@ -81,7 +81,7 @@ button:hover{
 
 <div class="card">
 
-<h2>📍 GPS Tracking</h2>
+<h2>GPS Tracking</h2>
 
 <button onclick="start()">Start Tracking</button>
 
@@ -95,145 +95,227 @@ button:hover{
 
 const BASE_URL="https://script.google.com/macros/s/AKfycbx2muAd_frIox42s18VScvt8xaZj11rwB85KloGpK1zMF3uk9UaNowk6mYCqcnibISM/exec";
 
-// ================= DEVICE ID AUTO =================
 
-let device_id = localStorage.getItem("device_id");
+// ================= DEVICE ID =================
+
+let device_id=localStorage.getItem("device_id");
 
 if(!device_id){
-  device_id="device-"+Math.random().toString(36).substring(2,6);
+
+  device_id="device-"+Math.random().toString(36).substring(2,7);
+
   localStorage.setItem("device_id",device_id);
+
 }
 
-// ================= MAP INIT =================
+
+// ================= MAP =================
 
 let map=L.map("map").setView([-7.25,112.75],13);
 
 L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+{
+maxZoom:19
+}
 ).addTo(map);
 
-// ================= DEVICE STORAGE =================
+
+// ================= STORAGE =================
 
 let markers={};
 let polylines={};
+let historyCache={};
 
 const colors=["red","blue","green","orange","purple","black"];
 
-// ================= STATUS =================
-
 const statusEl=document.getElementById("status");
+
 
 // ================= START GPS =================
 
 function start(){
 
-  if(!navigator.geolocation){
-    alert("GPS tidak tersedia");
-    return;
-  }
+if(!navigator.geolocation){
 
-  statusEl.innerText="Device: "+device_id;
+alert("GPS tidak tersedia");
 
-  navigator.geolocation.watchPosition(pos=>{
-
-    const lat=pos.coords.latitude;
-    const lng=pos.coords.longitude;
-    const acc=pos.coords.accuracy;
-
-    statusEl.innerText=
-      "Device: "+device_id+
-      " | Lat:"+lat.toFixed(5)+
-      " Lng:"+lng.toFixed(5);
-
-    sendGPS(lat,lng,acc);
-
-  },err=>{
-
-    statusEl.innerText="❌ GPS error";
-
-  },{
-    enableHighAccuracy:true,
-    maximumAge:0,
-    timeout:5000
-  });
-
-  setInterval(loadHistory,5000);
+return;
 
 }
+
+statusEl.innerText="Device: "+device_id+" | mencari GPS...";
+
+navigator.geolocation.watchPosition(
+
+pos=>{
+
+const lat=pos.coords.latitude;
+const lng=pos.coords.longitude;
+const acc=pos.coords.accuracy;
+
+statusEl.innerText=
+"Device: "+device_id+
+" | Lat:"+lat.toFixed(5)+
+" Lng:"+lng.toFixed(5);
+
+sendGPS(lat,lng,acc);
+
+},
+
+err=>{
+
+statusEl.innerText="❌ GPS error";
+
+},
+
+{
+enableHighAccuracy:true,
+maximumAge:0,
+timeout:5000
+}
+
+);
+
+setInterval(loadHistory,5000);
+
+}
+
 
 // ================= SEND GPS =================
 
 async function sendGPS(lat,lng,acc){
 
-  await fetch(BASE_URL+"?path=/telemetry/gps",{
-    method:"POST",
-    body:JSON.stringify({
-      device_id:device_id,
-      ts:new Date().toISOString(),
-      lat:lat,
-      lng:lng,
-      accuracy_m:acc
-    })
-  });
+try{
+
+await fetch(BASE_URL+"?path=/telemetry/gps",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+device_id:device_id,
+ts:new Date().toISOString(),
+lat:lat,
+lng:lng,
+accuracy_m:acc
+
+})
+
+});
+
+}catch(e){
+
+console.log("send error",e);
 
 }
+
+}
+
 
 // ================= UPDATE DEVICE =================
 
 function updateDevice(id,lat,lng){
 
-  if(!markers[id]){
+if(!markers[id]){
 
-    const color=colors[
-      Object.keys(markers).length % colors.length
-    ];
+const color=colors[
+Object.keys(markers).length % colors.length
+];
 
-    const icon=L.divIcon({
-      className:"custom-marker",
-      html:`<div style="
-        background:${color};
-        width:16px;
-        height:16px;
-        border-radius:50%;
-        border:2px solid white;
-      "></div>`
-    });
+const icon=L.divIcon({
 
-    markers[id]=L.marker([lat,lng],{icon})
-      .addTo(map)
-      .bindPopup("Device: "+id);
+className:"custom-marker",
 
-    polylines[id]=L.polyline([],{
-      color:color
-    }).addTo(map);
+html:`<div style="
+background:${color};
+width:16px;
+height:16px;
+border-radius:50%;
+border:2px solid white;
+"></div>`
 
-  }else{
+});
 
-    markers[id].setLatLng([lat,lng]);
+markers[id]=L.marker([lat,lng],{icon})
+.addTo(map)
+.bindPopup("Device: "+id);
 
-  }
+polylines[id]=L.polyline([],{
+color:color,
+weight:4
+}).addTo(map);
 
-  polylines[id].addLatLng([lat,lng]);
+historyCache[id]=[];
 
 }
+
+markers[id].setLatLng([lat,lng]);
+
+historyCache[id].push([lat,lng]);
+
+polylines[id].setLatLngs(historyCache[id]);
+
+map.setView([lat,lng],16);
+
+}
+
 
 // ================= LOAD HISTORY =================
 
 async function loadHistory(){
 
-  const res=await fetch(BASE_URL+"?path=/telemetry/gps/history&limit=200");
+try{
 
-  const json=await res.json();
+const res=await fetch(
+BASE_URL+"?path=/telemetry/gps/history&limit=200"
+);
 
-  if(!json.ok) return;
+const json=await res.json();
 
-  const data=json.data.items;
+if(!json.ok) return;
 
-  data.forEach(p=>{
+const data=json.data.items;
 
-    updateDevice(p.device_id,p.lat,p.lng);
+let grouped={};
 
-  });
+data.forEach(p=>{
+
+if(!grouped[p.device_id]){
+
+grouped[p.device_id]=[];
+
+}
+
+grouped[p.device_id].push([p.lat,p.lng]);
+
+});
+
+Object.keys(grouped).forEach(id=>{
+
+if(!markers[id]){
+
+updateDevice(id,grouped[id][0][0],grouped[id][0][1]);
+
+}
+
+historyCache[id]=grouped[id];
+
+polylines[id].setLatLngs(grouped[id]);
+
+markers[id].setLatLng(grouped[id][grouped[id].length-1]);
+
+});
+
+}catch(e){
+
+console.log("history error",e);
+
+}
 
 }
 
