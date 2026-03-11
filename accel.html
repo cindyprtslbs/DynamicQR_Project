@@ -32,6 +32,27 @@ h2{
   color:#1e293b;
 }
 
+.form-group{
+  display:flex;
+  flex-direction:column;
+  text-align:left;
+  margin-bottom:12px;
+}
+
+.form-group label{
+  font-size:14px;
+  font-weight:600;
+  color:#334155;
+  margin-bottom:4px;
+}
+
+.form-group input{
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e2e8f0;
+  font-size:14px;
+}
+
 #live{
   font-size:14px;
   color:#475569;
@@ -89,7 +110,13 @@ pre{
 <body>
 
 <div class="container">
+
   <h2>Accelerometer (Batch)</h2>
+
+  <div class="form-group">
+    <label>Device ID</label>
+    <input id="deviceInput">
+  </div>
 
   <p id="live">Waiting sensor...</p>
 
@@ -98,27 +125,38 @@ pre{
     <button class="stop" onclick="stop()">Stop</button>
   </div>
 
-  <!-- GRAFIK -->
   <canvas id="chart" height="160"></canvas>
 
   <h3>Latest from Server</h3>
   <pre id="latest">-</pre>
+
 </div>
 
 <script>
-const BASE_URL="https://script.google.com/macros/s/AKfycby0DQbTLXa7pWmeqbOmdpttbjmbdq8r1e6tnCHDOkaFY9ED7AlfSzjWLGPDdZAGeV3W/exec"; 
-const device_id="dev-"+Math.random().toString(36).substring(2,8);
+
+const BASE_URL="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec"; 
+
+// ================= DEFAULT DEVICE ID =================
+
+// const defaultDevice="dev-001"+Math.random().toString(36).substring(2,7);
+const defaultDevice="dev-001";
+
+document.getElementById("deviceInput").value=defaultDevice;
+
+let device_id=defaultDevice;
 
 let samples=[];
 let timerSend=null;
 let motionHandler=null;
 let isRunning=false;
 
-// throttle sampling (max 5 data/detik)
 let lastSampleTime = 0;
 
-// ====== CHART ======
+
+// ===== CHART =====
+
 const ctx = document.getElementById("chart").getContext("2d");
+
 const chart = new Chart(ctx,{
   type:"line",
   data:{
@@ -132,12 +170,16 @@ const chart = new Chart(ctx,{
   options:{
     responsive:true,
     animation:false,
-    scales:{ y:{ min:-20, max:20 } }
+    scales:{
+      y:{min:-20,max:20}
+    }
   }
 });
 
+
 function updateChart(x,y,z){
-  const t = new Date().toLocaleTimeString();
+
+  const t=new Date().toLocaleTimeString();
 
   chart.data.labels.push(t);
   chart.data.datasets[0].data.push(x);
@@ -152,24 +194,39 @@ function updateChart(x,y,z){
   chart.update();
 }
 
+
 // ================= START =================
+
 function start(){
+
+  const input=document.getElementById("deviceInput").value.trim();
+
+  if(!input){
+    alert("Device ID wajib diisi");
+    return;
+  }
+
+  device_id=input;
+
   if(isRunning) return;
+
   isRunning=true;
 
   motionHandler = e=>{
-    const now = Date.now();
-    if(now - lastSampleTime < 200) return; // 200ms = 5x per detik
-    lastSampleTime = now;
 
-    const acc = e.accelerationIncludingGravity;
+    const now=Date.now();
+    if(now-lastSampleTime<200) return;
+    lastSampleTime=now;
+
+    const acc=e.accelerationIncludingGravity;
     if(!acc) return;
 
     const x=acc.x;
     const y=acc.y;
     const z=acc.z;
 
-    live.innerText=`x:${x.toFixed(2)} y:${y.toFixed(2)} z:${z.toFixed(2)}`;
+    document.getElementById("live").innerText=
+      `Device:${device_id} | x:${x.toFixed(2)} y:${y.toFixed(2)} z:${z.toFixed(2)}`;
 
     updateChart(x,y,z);
 
@@ -179,32 +236,43 @@ function start(){
       y:y,
       z:z
     });
+
   };
 
-  window.addEventListener("devicemotion", motionHandler);
+  window.addEventListener("devicemotion",motionHandler);
 
-  timerSend=setInterval(sendBatch,5000); // batch tiap 5 detik
+  timerSend=setInterval(sendBatch,5000);
+
 }
 
+
 // ================= STOP =================
+
 function stop(){
+
   if(!isRunning) return;
+
   isRunning=false;
 
   clearInterval(timerSend);
   timerSend=null;
 
   if(motionHandler){
-    window.removeEventListener("devicemotion", motionHandler);
+    window.removeEventListener("devicemotion",motionHandler);
     motionHandler=null;
   }
 
   samples=[];
-  live.innerText="Stopped";
+
+  document.getElementById("live").innerText="Stopped";
+
 }
 
+
 // ================= SEND BATCH =================
+
 async function sendBatch(){
+
   if(samples.length===0) return;
 
   const payload={
@@ -216,37 +284,58 @@ async function sendBatch(){
   samples=[];
 
   try{
+
     const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
       method:"POST",
       body:JSON.stringify(payload)
     });
 
     const json=await res.json();
+
     console.log("POST:",json);
+
   }catch(err){
+
     console.log("send error",err);
+
   }
+
 }
 
+
 // ================= GET LATEST =================
+
 async function getLatest(){
+
+  if(!device_id) return;
+
   try{
+
     const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id);
+
     const json=await res.json();
 
     if(json.ok){
-      latest.innerText=
+
+      document.getElementById("latest").innerText=
+
 `time: ${json.data.t}
 x: ${json.data.x}
 y: ${json.data.y}
 z: ${json.data.z}`;
+
     }
+
   }catch(err){
+
     console.log("latest error");
+
   }
+
 }
 
 setInterval(getLatest,3000);
+
 </script>
 
 </body>

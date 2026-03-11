@@ -42,7 +42,19 @@ h2{
   margin:0;
 }
 
-/* READER BESAR */
+.form-group{
+  display:flex;
+  flex-direction:column;
+  text-align:left;
+  gap:6px;
+}
+
+.form-group label{
+  font-size:14px;
+  font-weight:600;
+  color:#334155;
+}
+
 #reader{
   width:100%;
   aspect-ratio:1/1;
@@ -50,7 +62,6 @@ h2{
   overflow:hidden;
 }
 
-/* paksa video penuh */
 #reader video{
   width:100% !important;
   height:100% !important;
@@ -84,7 +95,6 @@ button{
 .success{ color:#16a34a; }
 .error{ color:#dc2626; }
 
-/* MOBILE OPTIMIZATION */
 @media (max-width:480px){
   body{
     align-items:flex-start;
@@ -103,8 +113,19 @@ button{
 <h2>📷 Scan QR Presensi</h2>
 
 <div id="loginBox">
+
+<div class="form-group">
+  <label>Inputkan NIM</label>
   <input id="nimInput" placeholder="Masukkan NIM">
-  <button onclick="saveNIM()">Mulai Scan</button>
+</div>
+
+<div class="form-group">
+  <label>Inputkan Device ID</label>
+  <input id="deviceInput" placeholder="Masukkan Device ID">
+</div>
+
+<button onclick="startSession()">Mulai Scan</button>
+
 </div>
 
 <div id="scanBox" style="display:none;">
@@ -115,64 +136,68 @@ button{
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycbza_xcaWTpYJSzJDTBokNSt5JrFpT-NCjiMnoYeVZhN5H4kI7iRlgtfQurVrX9aJve0/exec";
+
+const BASE_URL="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec";
 
 // DOM
 const loginBox = document.getElementById("loginBox");
 const scanBox  = document.getElementById("scanBox");
 const nimInput = document.getElementById("nimInput");
+const deviceInput = document.getElementById("deviceInput");
 const statusEl = document.getElementById("status");
+
+// DEFAULT VALUE
+const defaultNIM = "434231000";
+// const defaultDevice = "dev-001" + Math.random().toString(36).substring(2,6);
+const defaultDevice = "dev-001";
+
+// LOAD FROM STORAGE
+nimInput.value = localStorage.getItem("nim") || defaultNIM;
+deviceInput.value = localStorage.getItem("device") || defaultDevice;
 
 // PARAM
 function param(n){
   return new URL(location.href).searchParams.get(n);
 }
+
 const token   = param("token");
 const course  = param("course");
 const session = param("session");
 
-// USER
-let user_id = localStorage.getItem("nim");
-const device_id = "web-" + Math.random().toString(36).substring(2,8);
+let user_id = "";
+let device_id = "";
 
-// INIT
-if(user_id){
-  loginBox.style.display="none";
-  scanBox.style.display="block";
+// START SESSION
+function startSession(){
 
-  if(token){
-    checkin();
-  }else{
-    startScanner();
-  }
-}
-
-// SAVE NIM
-function saveNIM(){
   const nim = nimInput.value.trim();
-  if(!nim){
-    alert("NIM wajib diisi");
+  const device = deviceInput.value.trim();
+
+  if(!nim || !device){
+    alert("NIM dan Device ID wajib diisi");
     return;
   }
 
   user_id = nim;
+  device_id = device;
+
+  // simpan agar next buka otomatis
   localStorage.setItem("nim", nim);
+  localStorage.setItem("device", device);
 
   loginBox.style.display="none";
   scanBox.style.display="block";
 
-  if(token){
-    checkin();
-  }else{
-    startScanner();
-  }
+  startScanner();
 }
 
 // CHECKIN
-async function checkin(){
+async function checkin(qrToken){
+
   setStatus("⏳ Mengirim presensi...", "loading");
 
   try{
+
     const res = await fetch(BASE+"?path=/presence/checkin",{
       method:"POST",
       body:JSON.stringify({
@@ -180,7 +205,7 @@ async function checkin(){
         device_id:device_id,
         course_id:course,
         session_id:session,
-        qr_token:token,
+        qr_token:qrToken,
         ts:new Date().toISOString()
       })
     });
@@ -188,19 +213,27 @@ async function checkin(){
     const json = await res.json();
 
     if(json.ok){
+
       setStatus("✅ PRESENSI BERHASIL", "success");
+
       new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg").play();
+
     }else{
+
       setStatus("❌ "+json.error, "error");
+
     }
 
   }catch(err){
+
     setStatus("❌ Gagal koneksi server", "error");
+
   }
 }
 
 // SCANNER
 function startScanner(){
+
   const scanner = new Html5Qrcode("reader");
 
   const size = Math.min(window.innerWidth * 0.9, 360);
@@ -208,18 +241,27 @@ function startScanner(){
   scanner.start(
     { facingMode:"environment" },
     { fps:10, qrbox: size * 0.75 },
+
     text=>{
-      // scanner.stop();
-      // location.href = text;
+
+      setStatus("QR terdeteksi, memproses...", "loading");
+
+      const params = new URL(text).searchParams;
+      const qrToken = params.get("token");
+
+      checkin(qrToken);
+
     }
+
   );
 }
 
 // STATUS
-function setStatus(text, type){
-  statusEl.innerText = text;
-  statusEl.className = type;
+function setStatus(text,type){
+  statusEl.innerText=text;
+  statusEl.className=type;
 }
+
 </script>
 
 </body>
