@@ -178,6 +178,28 @@ async function sendGPS(lat,lng,acc){
 
 }
 
+function animateMarker(marker, from, to, duration=800){
+
+  const start = performance.now();
+
+  function frame(now){
+
+    const progress = Math.min((now-start)/duration,1);
+
+    const lat = from[0] + (to[0]-from[0]) * progress;
+    const lng = from[1] + (to[1]-from[1]) * progress;
+
+    marker.setLatLng([lat,lng]);
+
+    if(progress < 1){
+      requestAnimationFrame(frame);
+    }
+  }
+
+  requestAnimationFrame(frame);
+
+}
+
 // ================= UPDATE DEVICE =================
 
 function updateDevice(id,lat,lng){
@@ -209,7 +231,16 @@ function updateDevice(id,lat,lng){
 
   }else{
 
-    markers[id].setLatLng([lat,lng]);
+    const old = markers[id].getLatLng();
+
+    animateMarker(
+      markers[id],
+      [old.lat,old.lng],
+      [lat,lng],
+      800
+    );
+
+    map.panTo([lat,lng]);
 
   }
 
