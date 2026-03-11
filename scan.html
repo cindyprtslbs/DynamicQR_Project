@@ -101,8 +101,9 @@ to{opacity:1;transform:translateY(0);}
 <h2>📷 Presensi Mahasiswa</h2>
 
 <input id="nimInput" placeholder="Masukkan NIM">
+<input id="deviceInput" placeholder="Masukkan Device ID">
 
-<button onclick="startScanner()">📸 Scan QR</button>
+<button onclick="startScanner()">Scan QR</button>
 
 <div id="reader"></div>
 
@@ -120,7 +121,7 @@ nimInput.addEventListener("input", ()=>{
 badge.style.display="none";
 });
 
-const deviceId="web-"+Math.random().toString(36).substr(2,6);
+let deviceId="";
 let html5QrCode;
 let lastScan="";
 
@@ -131,9 +132,17 @@ badge.style.display="block";
 }
 
 function startScanner(){
+
 const nim = nimInput.value.trim();
+deviceId = document.getElementById("deviceInput").value.trim();
+
 if(!nim){
 showBadge("❌ Isi NIM dulu","error");
+return;
+}
+
+if(!deviceId){
+showBadge("❌ Isi Device ID dulu","error");
 return;
 }
 
