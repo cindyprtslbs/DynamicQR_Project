@@ -131,7 +131,7 @@ to{opacity:1;transform:translateY(0);}
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycbyYPdTcsY2MpQIijcj2oplM1VtolC3JbTDfgSqoV2BDsafa5KBDJL9ggNdRp37-6ysG/exec";
+const BASE="https://script.google.com/macros/s/AKfycby5be8mymZEOu4LsmL0tqQt0DiERwV4N_tH-lHkm9BmhUcMUvlyiGnoXNKTFzC2hnXM/exec";
 
 const reader=document.getElementById("reader");
 const badge=document.getElementById("statusBadge");
@@ -215,15 +215,22 @@ body:JSON.stringify(payload)
 const json=await res.json();
 
 if(json.ok){
-showBadge("✅ Presence Success","success");
-    }else if(json.error==="token_expired"){
-showBadge("⚠️ QR Expired","warning");
-    }else if(json.error==="already_checked_in"){
-      showBadge("⚠️ Sudah presensi","warning");
-    }else if(json.error==="invalid_session"){
-      showBadge("❌ Session tidak cocok","error");
-}else{
-showBadge("❌ Presence Invalid","error");
+  showBadge("✅ Presence Success","success");
+}
+else if(json.error==="token_expired"){
+  showBadge("⚠️ QR Expired","warning");
+}
+else if(json.error==="already_checked_in"){
+  showBadge("⚠️ Sudah presensi","warning");
+}
+else if(json.error==="invalid_session"){
+  showBadge("❌ Session tidak cocok","error");
+}
+else if(json.error==="token_invalid"){
+  showBadge("❌ Token tidak valid","error");
+}
+else{
+  showBadge("❌ "+json.error,"error");
 }
 
 }catch{
