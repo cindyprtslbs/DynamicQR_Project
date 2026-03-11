@@ -8,289 +8,200 @@
 
 <style>
 *{
-  box-sizing:border-box;
-  font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+box-sizing:border-box;
+font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 body{
-  background:linear-gradient(135deg,#6366f1,#818cf8);
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin:0;
-  padding:15px;
+background:linear-gradient(135deg,#6366f1,#818cf8);
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+margin:0;
+padding:15px;
 }
 
 .container{
-  width:100%;
-  max-width:420px;
+background:#fff;
+width:100%;
+max-width:400px;
+padding:20px;
+border-radius:20px;
+box-shadow:0 15px 30px rgba(0,0,0,.2);
+text-align:center;
 }
 
-.card{
-  background:#fff;
-  padding:20px;
-  border-radius:20px;
-  box-shadow:0 15px 30px rgba(0,0,0,.2);
-}
-
-.form-group{
-  display:flex;
-  flex-direction:column;
-  text-align:left;
-  gap:6px;
-}
-
-.form-group label{
-  font-size:14px;
-  font-weight:600;
-  color:#334155;
-}
-
-#reader{
-  width:100%;
-  max-width:400px;
-  padding:20px;
-  border-radius:20px;
-  box-shadow:0 15px 30px rgba(0,0,0,.2);
-  text-align:center;
-}
-
-#reader video{
-  width:100% !important;
-  height:100% !important;
-  object-fit:cover !important;
+h2{
+margin-bottom:15px;
+color:#1e293b;
 }
 
 input{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:1.5px solid #cbd5f5;
-  font-size:16px;
-  outline:none;
+width:100%;
+padding:14px;
+border-radius:12px;
+border:1.5px solid #cbd5f5;
+font-size:16px;
+outline:none;
 }
 
 input:focus{
-  border-color:#6366f1;
+border-color:#6366f1;
 }
 
 button{
-  width:100%;
-  padding:14px;
-  margin-top:12px;
-  border:none;
-  border-radius:12px;
-  background:#6366f1;
-  color:#fff;
-  font-size:16px;
-  font-weight:600;
-  cursor:pointer;
-  transition:.2s;
+width:100%;
+padding:14px;
+margin-top:12px;
+border:none;
+border-radius:12px;
+background:#6366f1;
+color:#fff;
+font-size:16px;
+font-weight:600;
+cursor:pointer;
+transition:.2s;
 }
 
 button:hover{
-  background:#4f46e5;
+background:#4f46e5;
 }
 
 #reader{
-  margin-top:15px;
-  border-radius:14px;
-  overflow:hidden;
-  display:none;
-  border:2px dashed #c7d2fe;
+margin-top:15px;
+border-radius:14px;
+overflow:hidden;
+display:none;
+border:2px dashed #c7d2fe;
 }
 
 .badge{
-  margin-top:15px;
-  padding:12px;
-  border-radius:999px;
-  font-weight:600;
-  display:none;
+margin-top:15px;
+padding:12px;
+border-radius:999px;
+font-weight:600;
+display:none;
+animation:fade .3s ease-in-out;
 }
 
 .success{background:#dcfce7;color:#166534;}
 .error{background:#fee2e2;color:#991b1b;}
 .warning{background:#fef3c7;color:#92400e;}
 
-@media (max-width:480px){
-  body{
-    align-items:flex-start;
-  }
-  .card{
-    margin-top:16px;
-  }
+@keyframes fade{
+from{opacity:0;transform:translateY(-5px);}
+to{opacity:1;transform:translateY(0);}
 }
 </style>
 </head>
 
 <body>
-
 <div class="container">
-<h2 style="text-align:center;color:white;">📷 Presensi Mahasiswa</h2>
+<h2>📷 Presensi Mahasiswa</h2>
 
-<div class="card">
-
-<h2>📷 Scan QR Presensi</h2>
-
-<div id="loginBox">
-
-<div class="form-group">
-<label>Inputkan NIM</label>
 <input id="nimInput" placeholder="Masukkan NIM">
-</div>
-
-<div class="form-group">
-<label>Inputkan Device ID</label>
-<input id="deviceInput" placeholder="Masukkan Device ID">
-</div>
-
-<button onclick="startSession()">Mulai Scan</button>
-
-</div>
-
-<div id="scanBox" style="display:none;">
 
 <button onclick="startScanner()">📸 Scan QR</button>
 
 <div id="reader"></div>
 
 <div id="statusBadge" class="badge"></div>
-
-</div>
-
-</div>
 </div>
 
 <script>
+const BASE="https://script.google.com/macros/s/AKfycbxlwUlQQXQDYzeC_eIHPTD5sU0rF44ZtHgUHOIuywz5ThXUzXIU55PM6D9cLVDVyJvA/exec";
 
-const BASE="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec";
+const reader=document.getElementById("reader");
+const badge=document.getElementById("statusBadge");
+const nimInput=document.getElementById("nimInput");
 
-// DOM
-const loginBox = document.getElementById("loginBox");
-const scanBox  = document.getElementById("scanBox");
-const nimInput = document.getElementById("nimInput");
-const deviceInput = document.getElementById("deviceInput");
-const statusEl = document.getElementById("statusBadge");
+nimInput.addEventListener("input", ()=>{
+badge.style.display="none";
+});
 
-// DEFAULT VALUE
-const defaultNIM = "434231000";
-const defaultDevice = "dev-001";
+const deviceId="web-"+Math.random().toString(36).substr(2,6);
+let html5QrCode;
+let lastScan="";
 
-// LOAD FROM STORAGE
-nimInput.value = localStorage.getItem("nim") || defaultNIM;
-deviceInput.value = localStorage.getItem("device") || defaultDevice;
-
-// PARAM
-function param(n){
-  return new URL(location.href).searchParams.get(n);
+function showBadge(text,type){
+badge.className="badge "+type;
+badge.innerText=text;
+badge.style.display="block";
 }
 
-const token   = param("token");
-const course  = param("course");
-const session = param("session");
-
-let user_id = "";
-let device_id = "";
-
-// START SESSION
-function startSession(){
-
-  const nim = nimInput.value.trim();
-  const device = deviceInput.value.trim();
-
-  if(!nim || !device){
-    alert("NIM dan Device ID wajib diisi");
-    return;
-  }
-
-  user_id = nim;
-  device_id = device;
-
-  localStorage.setItem("nim", nim);
-  localStorage.setItem("device", device);
-
-  loginBox.style.display="none";
-  scanBox.style.display="block";
-
-  startScanner();
-}
-
-// CHECKIN
-async function checkin(qrToken){
-
-  setStatus("⏳ Mengirim presensi...", "warning");
-
-  try{
-
-    const res = await fetch(BASE+"?path=/presence/checkin",{
-      method:"POST",
-      body:JSON.stringify({
-        user_id:user_id,
-        device_id:device_id,
-        course_id:course,
-        session_id:session,
-        qr_token:qrToken,
-        ts:new Date().toISOString()
-      })
-    });
-
-    const json=await res.json();
-
-    if(json.ok){
-
-      setStatus("✅ PRESENSI BERHASIL", "success");
-
-      new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg").play();
-
-    }else{
-
-      setStatus("❌ "+json.error, "error");
-
-    }
-
-  }catch(err){
-
-    setStatus("❌ Gagal koneksi server", "error");
-
-  }
-
-}
-
-// SCANNER
 function startScanner(){
-
-  document.getElementById("reader").style.display="block";
-
-  const scanner = new Html5Qrcode("reader");
-
-  const size = Math.min(window.innerWidth * 0.9, 360);
-
-  scanner.start(
-    { facingMode:"environment" },
-    { fps:10, qrbox: size * 0.75 },
-
-    text=>{
-
-      setStatus("QR terdeteksi, memproses...", "warning");
-
-      const params = new URL(text).searchParams;
-      const qrToken = params.get("token");
-
-      checkin(qrToken);
-
-    }
-
-  );
+const nim = nimInput.value.trim();
+if(!nim){
+showBadge("❌ Isi NIM dulu","error");
+return;
 }
 
-// STATUS
-function setStatus(text,type){
-  statusEl.innerText=text;
-  statusEl.className="badge "+type;
-  statusEl.style.display="block";
+// RESET STATUS
+badge.style.display = "none";
+lastScan = "";
+
+// STOP scanner lama jika ada
+if(html5QrCode){
+html5QrCode.stop().catch(()=>{});
 }
 
+reader.style.display="block";
+
+html5QrCode = new Html5Qrcode("reader");
+
+html5QrCode.start(
+{ facingMode:"environment" },
+{ fps:10, qrbox:{width:250,height:250} },
+onScanSuccess
+).catch(()=>{
+showBadge("❌ Kamera tidak bisa dibuka","error");
+});
+}
+
+async function onScanSuccess(decodedText){
+if(decodedText===lastScan) return;
+lastScan = decodedText;
+
+try{
+const url=new URL(decodedText);
+const token=url.searchParams.get("token");
+const course=url.searchParams.get("course");
+const session=url.searchParams.get("session");
+
+const payload={
+user_id:nimInput.value,
+device_id:deviceId,
+course_id:course,
+session_id:session,
+qr_token:token,
+ts:new Date().toISOString()
+};
+
+const res=await fetch(`${BASE}?path=/presence/checkin`,{
+method:"POST",
+body:JSON.stringify(payload)
+});
+
+const json=await res.json();
+
+if(json.ok){
+showBadge("✅ Presence Success","success");
+    }else if(json.error==="token_expired"){
+showBadge("⚠️ QR Expired","warning");
+    }else if(json.error==="already_checked_in"){
+      showBadge("⚠️ Sudah presensi","warning");
+    }else if(json.error==="invalid_session"){
+      showBadge("❌ Session tidak cocok","error");
+}else{
+showBadge("❌ Presence Invalid","error");
+}
+
+}catch{
+showBadge("❌ QR tidak valid","error");
+}
+
+setTimeout(()=>lastScan="",3000);
+}
 </script>
 </body>
-</html>
