@@ -243,9 +243,20 @@ const json=await res.json();
 
 if(!json.ok || !json.data) return;
 
-const x=Number(json.data.x);
-const y=Number(json.data.y);
-const z=Number(json.data.z);
+const dataTime = new Date(json.data.t).getTime();
+const now = Date.now();
+
+const delay = (now - dataTime) / 1000;
+
+// kalau data lebih dari 5 detik = device stop
+if(delay > 5){
+updateStatus();
+return;
+}
+
+const x = Number(json.data.x);
+const y = Number(json.data.y);
+const z = Number(json.data.z);
 
 updateChart(x,y,z);
 
