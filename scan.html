@@ -68,6 +68,19 @@ button:hover{
 background:#4f46e5;
 }
 
+.input-group{
+margin-bottom:12px;
+text-align:left;
+}
+
+.input-group label{
+display:block;
+font-size:13px;
+font-weight:600;
+margin-bottom:6px;
+color:#475569;
+}
+
 #reader{
 margin-top:15px;
 border-radius:14px;
@@ -98,10 +111,17 @@ to{opacity:1;transform:translateY(0);}
 
 <body>
 <div class="container">
-<h2>📷 Presensi Mahasiswa</h2>
+<h2>Presensi Mahasiswa</h2>
 
+<div class="input-group">
+<label>NIM</label>
 <input id="nimInput" placeholder="Masukkan NIM">
-<input id="deviceInput" placeholder="Masukkan Device ID">
+</div>
+
+<div class="input-group">
+<label>Device ID</label>
+<input id="deviceInput" placeholder="dev-001">
+</div>
 
 <button onclick="startScanner()">Scan QR</button>
 
