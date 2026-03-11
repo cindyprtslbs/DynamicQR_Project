@@ -8,110 +8,182 @@
 
 <style>
 
-*{box-sizing:border-box;}
+*{
+box-sizing:border-box;
+}
 
 body{
-  margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:20px;
+margin:0;
+font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+background:#f8fafc;
+color:#1e293b;
 }
+
+/* NAVBAR */
+
+.navbar{
+width:100%;
+background:white;
+border-bottom:1px solid #e2e8f0;
+padding:14px 24px;
+position:sticky;
+top:0;
+z-index:10;
+}
+
+.navbar-inner{
+max-width:1100px;
+margin:auto;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.logo{
+font-weight:700;
+font-size:18px;
+color:#6366f1;
+}
+
+.nav-right{
+font-size:14px;
+color:#64748b;
+}
+
+/* HERO */
+
+.hero{
+max-width:1100px;
+margin:auto;
+padding:50px 20px 30px 20px;
+text-align:center;
+}
+
+.hero h1{
+margin:0;
+font-size:34px;
+font-weight:700;
+color:#1e293b;
+}
+
+.hero p{
+margin-top:12px;
+font-size:16px;
+color:#64748b;
+max-width:600px;
+margin-left:auto;
+margin-right:auto;
+}
+
+/* GRID */
 
 .container{
-  width:100%;
-  max-width:900px;
-}
-
-.header{
-  text-align:center;
-  margin-bottom:20px;
-}
-
-.header h1{
-  margin:0;
-  color:#1e293b;
-}
-
-.header p{
-  margin-top:6px;
-  color:#64748b;
+max-width:1100px;
+margin:auto;
+padding:20px;
 }
 
 .grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:16px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:22px;
 }
 
+/* CARD */
+
 .card{
-  background:white;
-  border-radius:18px;
-  padding:20px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  transition:0.2s;
+background:white;
+border-radius:18px;
+padding:24px;
+border:1px solid #e2e8f0;
+box-shadow:0 10px 25px rgba(0,0,0,0.05);
+display:flex;
+flex-direction:column;
+gap:12px;
+transition:all .2s ease;
 }
 
 .card:hover{
-  transform:translateY(-3px);
+transform:translateY(-6px);
+box-shadow:0 18px 40px rgba(0,0,0,0.08);
 }
 
 .card h3{
-  margin:0;
-  color:#1e293b;
+margin:0;
+font-size:18px;
 }
 
 .card p{
-  font-size:14px;
-  color:#475569;
-  line-height:1.5;
+font-size:14px;
+color:#475569;
+line-height:1.6;
+flex-grow:1;
 }
 
+/* BUTTON */
+
 button{
-  margin-top:auto;
-  padding:12px;
-  border:none;
-  border-radius:12px;
-  background:#6366f1;
-  color:white;
-  font-weight:600;
-  cursor:pointer;
+padding:12px;
+border:none;
+border-radius:10px;
+background:#6366f1;
+color:white;
+font-weight:600;
+font-size:14px;
+cursor:pointer;
+transition:.2s;
 }
 
 button:hover{
-  background:#4f46e5;
+background:#4f46e5;
 }
 
+/* FOOTER */
+
 .footer{
-  text-align:center;
-  margin-top:20px;
-  color:#64748b;
-  font-size:13px;
+margin-top:50px;
+text-align:center;
+font-size:13px;
+color:#64748b;
+padding-bottom:30px;
+}
+
+/* MOBILE */
+
+@media(max-width:600px){
+
+.hero h1{
+font-size:26px;
+}
+
 }
 
 </style>
 </head>
 
 <body>
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="logo">QR Presensi Dinamis</div>
+      <div class="nav-right">Cloud Computing</div>
+    </div>
+  </div>
+
+<div class="hero">
+<h1>Cloud Sensor Dashboard</h1>
+<p>
+Platform monitoring dan presensi berbasis QR Code, GPS, 
+dan sensor smartphone secara realtime.
+</p>
+</div>
 
 <div class="container">
-
-<div class="header">
-<h1>📡 Cloud Sensor Dashboard</h1>
-<p>Platform monitoring dan presensi berbasis QR, GPS, dan sensor smartphone</p>
-</div>
 
 <div class="grid">
 
 <!-- GENERATE QR -->
 <div class="card">
-<h3>🧑‍🏫 Generate QR (DOSEN)</h3>
+<h3>Generate QR (DOSEN)</h3>
 <p>
 Digunakan oleh dosen untuk membuat QR presensi setiap sesi perkuliahan. 
 QR berisi token unik yang hanya berlaku untuk sesi tersebut.
@@ -155,7 +227,7 @@ Buka Modul
 
 <!-- MONITOR ACCEL -->
 <div class="card">
-<h3>🖥️ Monitor Accelerometer</h3>
+<h3>Monitor Accelerometer</h3>
 <p>
 Dashboard admin untuk memantau data accelerometer dari semua device.
 Menampilkan grafik sensor X, Y, Z secara realtime serta status device
@@ -170,7 +242,7 @@ Buka Modul
 
 <!-- GPS -->
 <div class="card">
-<h3>📍 GPS Tracker</h3>
+<h3>GPS Tracker</h3>
 <p>
 Menampilkan lokasi perangkat secara realtime menggunakan GPS 
 serta menyimpan histori perjalanan ke server yang dapat 
