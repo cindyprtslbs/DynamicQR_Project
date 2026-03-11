@@ -1,7 +1,7 @@
 API CONTRACT SIMPLE V1
 
 BASE URL:
-https://script.google.com/macros/s/{DEPLOY_ID}/exec
+https://script.google.com/macros/s/AKfycbx2muAd_frIox42s18VScvt8xaZj11rwB85KloGpK1zMF3uk9UaNowk6mYCqcnibISM/exec
 
 Semua endpoint menggunakan parameter:
 ?path=/endpoint
