@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>GPS Tracker</title>
+<title>Realtime GPS Tracker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -10,68 +10,43 @@
 
 <style>
 
-*{box-sizing:border-box;}
-
 html,body{
-  width:100%;
-  height:100%;
-  margin:0;
-}
-
-body{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  padding:16px;
-}
-
-.card{
-  background:white;
-  padding:24px 20px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
-  width:100%;
-  max-width:520px;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  text-align:center;
-}
-
-h2{
-  margin:0;
-  color:#1e293b;
-}
-
-button{
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:12px;
-  background:#6366f1;
-  color:white;
-  font-weight:600;
-  font-size:16px;
-  cursor:pointer;
-}
-
-button:hover{
-  background:#4f46e5;
-}
-
-#status{
-  font-size:14px;
-  font-weight:600;
-  color:#334155;
+height:100%;
+margin:0;
+font-family:system-ui;
 }
 
 #map{
-  width:100%;
-  height:320px;
-  border-radius:12px;
-  overflow:hidden;
+height:100%;
+width:100%;
+}
+
+.panel{
+position:absolute;
+top:10px;
+left:10px;
+z-index:1000;
+background:white;
+padding:15px;
+border-radius:12px;
+box-shadow:0 4px 12px rgba(0,0,0,0.15);
+width:260px;
+}
+
+button{
+width:100%;
+padding:10px;
+border:none;
+border-radius:8px;
+background:#4f46e5;
+color:white;
+font-weight:600;
+cursor:pointer;
+}
+
+#status{
+margin-top:10px;
+font-size:13px;
 }
 
 </style>
@@ -79,161 +54,241 @@ button:hover{
 
 <body>
 
-<div class="card">
+<div class="panel">
 
-<h2>📍 GPS Tracking</h2>
+<h3>GPS Tracker</h3>
 
-<button onclick="start()">Start Tracking</button>
+<button onclick="startTracking()">Start Tracking</button>
 
-<div id="status">Menunggu GPS...</div>
-
-<div id="map"></div>
+<div id="status">Waiting GPS...</div>
 
 </div>
+
+<div id="map"></div>
 
 <script>
 
 const BASE_URL="https://script.google.com/macros/s/AKfycbx2muAd_frIox42s18VScvt8xaZj11rwB85KloGpK1zMF3uk9UaNowk6mYCqcnibISM/exec";
 
-// ================= DEVICE ID AUTO =================
 
-let device_id = localStorage.getItem("device_id");
+// ================= DEVICE ID =================
+
+let device_id=localStorage.getItem("device_id");
 
 if(!device_id){
-  device_id="device-"+Math.random().toString(36).substring(2,6);
-  localStorage.setItem("device_id",device_id);
+
+device_id="dev-"+Math.random().toString(36).substr(2,5);
+
+localStorage.setItem("device_id",device_id);
+
 }
 
-// ================= MAP INIT =================
 
-let map=L.map("map").setView([-7.25,112.75],13);
+// ================= MAP =================
+
+const map=L.map("map").setView([-7.25,112.75],13);
 
 L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+{maxZoom:19}
 ).addTo(map);
 
-// ================= DEVICE STORAGE =================
+
+// ================= STORAGE =================
 
 let markers={};
-let polylines={};
+let lines={};
 
-const colors=["red","blue","green","orange","purple","black"];
+const colors=[
+"red","blue","green","orange","purple",
+"black","brown","yellow"
+];
 
-// ================= STATUS =================
-
-const statusEl=document.getElementById("status");
 
 // ================= START GPS =================
 
-function start(){
+function startTracking(){
 
-  if(!navigator.geolocation){
-    alert("GPS tidak tersedia");
-    return;
-  }
+if(!navigator.geolocation){
 
-  statusEl.innerText="Device: "+device_id;
+alert("GPS tidak tersedia");
 
-  navigator.geolocation.watchPosition(pos=>{
-
-    const lat=pos.coords.latitude;
-    const lng=pos.coords.longitude;
-    const acc=pos.coords.accuracy;
-
-    statusEl.innerText=
-      "Device: "+device_id+
-      " | Lat:"+lat.toFixed(5)+
-      " Lng:"+lng.toFixed(5);
-
-    sendGPS(lat,lng,acc);
-
-  },err=>{
-
-    statusEl.innerText="❌ GPS error";
-
-  },{
-    enableHighAccuracy:true,
-    maximumAge:0,
-    timeout:5000
-  });
-
-  setInterval(loadHistory,5000);
+return;
 
 }
+
+document.getElementById("status").innerText="Device: "+device_id;
+
+navigator.geolocation.watchPosition(
+
+pos=>{
+
+const lat=pos.coords.latitude;
+const lng=pos.coords.longitude;
+
+document.getElementById("status").innerText=
+device_id+" | "+lat.toFixed(5)+","+lng.toFixed(5);
+
+sendGPS(lat,lng);
+
+},
+
+err=>{
+
+document.getElementById("status").innerText="GPS error";
+
+},
+
+{
+enableHighAccuracy:true
+}
+
+);
+
+// load semua device tiap 3 detik
+setInterval(loadDevices,3000);
+
+}
+
 
 // ================= SEND GPS =================
 
-async function sendGPS(lat,lng,acc){
+async function sendGPS(lat,lng){
 
-  await fetch(BASE_URL+"?path=/telemetry/gps",{
-    method:"POST",
-    body:JSON.stringify({
-      device_id:device_id,
-      ts:new Date().toISOString(),
-      lat:lat,
-      lng:lng,
-      accuracy_m:acc
-    })
-  });
+try{
+
+await fetch(BASE_URL+"?path=/telemetry/gps",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+device_id:device_id,
+ts:new Date().toISOString(),
+lat:lat,
+lng:lng
+
+})
+
+});
+
+}catch(e){
+
+console.log(e);
 
 }
+
+}
+
 
 // ================= UPDATE DEVICE =================
 
 function updateDevice(id,lat,lng){
 
-  if(!markers[id]){
+// warna berdasarkan index device
+let index=Object.keys(markers).indexOf(id);
 
-    const color=colors[
-      Object.keys(markers).length % colors.length
-    ];
+if(index==-1){
 
-    const icon=L.divIcon({
-      className:"custom-marker",
-      html:`<div style="
-        background:${color};
-        width:16px;
-        height:16px;
-        border-radius:50%;
-        border:2px solid white;
-      "></div>`
-    });
-
-    markers[id]=L.marker([lat,lng],{icon})
-      .addTo(map)
-      .bindPopup("Device: "+id);
-
-    polylines[id]=L.polyline([],{
-      color:color
-    }).addTo(map);
-
-  }else{
-
-    markers[id].setLatLng([lat,lng]);
-
-  }
-
-  polylines[id].addLatLng([lat,lng]);
+index=Object.keys(markers).length;
 
 }
 
-// ================= LOAD HISTORY =================
+const color=colors[index % colors.length];
 
-async function loadHistory(){
 
-  const res=await fetch(BASE_URL+"?path=/telemetry/gps/history&limit=200");
+// buat marker jika belum ada
+if(!markers[id]){
 
-  const json=await res.json();
+const icon=L.divIcon({
 
-  if(!json.ok) return;
+className:"",
 
-  const data=json.data.items;
+html:`<div style="
+width:16px;
+height:16px;
+background:${color};
+border:2px solid white;
+border-radius:50%;
+"></div>`
 
-  data.forEach(p=>{
+});
 
-    updateDevice(p.device_id,p.lat,p.lng);
+markers[id]=L.marker([lat,lng],{icon})
+.addTo(map)
+.bindPopup("Device: "+id);
 
-  });
+lines[id]=L.polyline([],{
+color:color,
+weight:4
+}).addTo(map);
+
+}
+
+
+// update posisi
+markers[id].setLatLng([lat,lng]);
+
+lines[id].addLatLng([lat,lng]);
+
+}
+
+
+// ================= LOAD DEVICE HISTORY =================
+
+async function loadDevices(){
+
+try{
+
+const res=await fetch(
+BASE_URL+"?path=/telemetry/gps/history&limit=200"
+);
+
+const json=await res.json();
+
+if(!json.ok) return;
+
+const data=json.data.items;
+
+
+// kelompokkan per device
+let grouped={};
+
+data.forEach(p=>{
+
+if(!grouped[p.device_id]){
+
+grouped[p.device_id]=[];
+
+}
+
+grouped[p.device_id].push(p);
+
+});
+
+
+// render tiap device
+Object.keys(grouped).forEach(id=>{
+
+const points=grouped[id];
+
+points.forEach(pt=>{
+
+updateDevice(id,pt.lat,pt.lng);
+
+});
+
+});
+
+}catch(e){
+
+console.log(e);
+
+}
 
 }
 
