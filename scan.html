@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,39 +7,31 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-*{box-sizing:border-box;}
-
-html,body{
-  width:100%;
-  height:100%;
-  margin:0;
+*{
+  box-sizing:border-box;
+  font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 body{
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  background:linear-gradient(135deg,#6366f1,#818cf8);
+  min-height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
-  padding:12px;
+  margin:0;
+  padding:15px;
+}
+
+.container{
+  width:100%;
+  max-width:420px;
 }
 
 .card{
-  background:white;
-  padding:16px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.08);
-  width:100%;
-  max-width:480px;
-  text-align:center;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-h2{ 
-  color:#1e293b; 
-  margin:0;
+  background:#fff;
+  padding:20px;
+  border-radius:20px;
+  box-shadow:0 15px 30px rgba(0,0,0,.2);
 }
 
 .form-group{
@@ -57,9 +49,11 @@ h2{
 
 #reader{
   width:100%;
-  aspect-ratio:1/1;
-  border-radius:12px;
-  overflow:hidden;
+  max-width:400px;
+  padding:20px;
+  border-radius:20px;
+  box-shadow:0 15px 30px rgba(0,0,0,.2);
+  text-align:center;
 }
 
 #reader video{
@@ -70,30 +64,54 @@ h2{
 
 input{
   width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #e2e8f0;
+  padding:14px;
+  border-radius:12px;
+  border:1.5px solid #cbd5f5;
+  font-size:16px;
+  outline:none;
+}
+
+input:focus{
+  border-color:#6366f1;
 }
 
 button{
   width:100%;
-  padding:12px;
+  padding:14px;
+  margin-top:12px;
   border:none;
   border-radius:12px;
   background:#6366f1;
-  color:white;
+  color:#fff;
+  font-size:16px;
   font-weight:600;
   cursor:pointer;
+  transition:.2s;
 }
 
-#status{
-  margin-top:8px;
+button:hover{
+  background:#4f46e5;
+}
+
+#reader{
+  margin-top:15px;
+  border-radius:14px;
+  overflow:hidden;
+  display:none;
+  border:2px dashed #c7d2fe;
+}
+
+.badge{
+  margin-top:15px;
+  padding:12px;
+  border-radius:999px;
   font-weight:600;
+  display:none;
 }
 
-.loading{ color:#0f172a; }
-.success{ color:#16a34a; }
-.error{ color:#dc2626; }
+.success{background:#dcfce7;color:#166534;}
+.error{background:#fee2e2;color:#991b1b;}
+.warning{background:#fef3c7;color:#92400e;}
 
 @media (max-width:480px){
   body{
@@ -108,6 +126,9 @@ button{
 
 <body>
 
+<div class="container">
+<h2 style="text-align:center;color:white;">📷 Presensi Mahasiswa</h2>
+
 <div class="card">
 
 <h2>📷 Scan QR Presensi</h2>
@@ -115,13 +136,13 @@ button{
 <div id="loginBox">
 
 <div class="form-group">
-  <label>Inputkan NIM</label>
-  <input id="nimInput" placeholder="Masukkan NIM">
+<label>Inputkan NIM</label>
+<input id="nimInput" placeholder="Masukkan NIM">
 </div>
 
 <div class="form-group">
-  <label>Inputkan Device ID</label>
-  <input id="deviceInput" placeholder="Masukkan Device ID">
+<label>Inputkan Device ID</label>
+<input id="deviceInput" placeholder="Masukkan Device ID">
 </div>
 
 <button onclick="startSession()">Mulai Scan</button>
@@ -129,26 +150,31 @@ button{
 </div>
 
 <div id="scanBox" style="display:none;">
-  <div id="reader"></div>
-  <div id="status" class="loading">Siapkan kamera...</div>
+
+<button onclick="startScanner()">📸 Scan QR</button>
+
+<div id="reader"></div>
+
+<div id="statusBadge" class="badge"></div>
+
 </div>
 
+</div>
 </div>
 
 <script>
 
-const BASE_URL="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec";
+const BASE="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec";
 
 // DOM
 const loginBox = document.getElementById("loginBox");
 const scanBox  = document.getElementById("scanBox");
 const nimInput = document.getElementById("nimInput");
 const deviceInput = document.getElementById("deviceInput");
-const statusEl = document.getElementById("status");
+const statusEl = document.getElementById("statusBadge");
 
 // DEFAULT VALUE
 const defaultNIM = "434231000";
-// const defaultDevice = "dev-001" + Math.random().toString(36).substring(2,6);
 const defaultDevice = "dev-001";
 
 // LOAD FROM STORAGE
@@ -181,7 +207,6 @@ function startSession(){
   user_id = nim;
   device_id = device;
 
-  // simpan agar next buka otomatis
   localStorage.setItem("nim", nim);
   localStorage.setItem("device", device);
 
@@ -194,7 +219,7 @@ function startSession(){
 // CHECKIN
 async function checkin(qrToken){
 
-  setStatus("⏳ Mengirim presensi...", "loading");
+  setStatus("⏳ Mengirim presensi...", "warning");
 
   try{
 
@@ -210,7 +235,7 @@ async function checkin(qrToken){
       })
     });
 
-    const json = await res.json();
+    const json=await res.json();
 
     if(json.ok){
 
@@ -229,10 +254,13 @@ async function checkin(qrToken){
     setStatus("❌ Gagal koneksi server", "error");
 
   }
+
 }
 
 // SCANNER
 function startScanner(){
+
+  document.getElementById("reader").style.display="block";
 
   const scanner = new Html5Qrcode("reader");
 
@@ -244,7 +272,7 @@ function startScanner(){
 
     text=>{
 
-      setStatus("QR terdeteksi, memproses...", "loading");
+      setStatus("QR terdeteksi, memproses...", "warning");
 
       const params = new URL(text).searchParams;
       const qrToken = params.get("token");
@@ -259,10 +287,10 @@ function startScanner(){
 // STATUS
 function setStatus(text,type){
   statusEl.innerText=text;
-  statusEl.className=type;
+  statusEl.className="badge "+type;
+  statusEl.style.display="block";
 }
 
 </script>
-
 </body>
 </html>
