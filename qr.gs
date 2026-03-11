@@ -160,7 +160,7 @@ margin-bottom:10px;
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycbxp_vksjiLyMBiFBA47VSIpIyCTP6XX86QoBvAf1XbZGzZj5663rIavFREQLo4Ge_24/exec";
+const BASE="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
 const CLIENT_SCAN="https://cindyprtslbs.github.io/DynamicQR_Project/scan.html";
 
 let tokenInterval;
