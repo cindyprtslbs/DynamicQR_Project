@@ -235,17 +235,17 @@ if(!device) return;
 
 try{
 
-const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device,{
+const res = await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device,{
 cache:"no-store"
 });
 
-const json=await res.json();
+const json = await res.json();
 
 if(!json.ok || !json.data) return;
 
-const x=Number(json.data.x);
-const y=Number(json.data.y);
-const z=Number(json.data.z);
+const x = Number(json.data.x);
+const y = Number(json.data.y);
+const z = Number(json.data.z);
 
 updateChart(x,y,z);
 
@@ -254,6 +254,7 @@ updateChart(x,y,z);
 }
 
 setInterval(fetchData,150);
+setInterval(updateStatus,1000);
 
 </script>
 
