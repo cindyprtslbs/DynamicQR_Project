@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Realtime GPS Tracker</title>
+<title>GPS Tracker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -10,43 +10,61 @@
 
 <style>
 
+*{box-sizing:border-box;}
+
 html,body{
+width:100%;
 height:100%;
 margin:0;
+}
+
+body{
 font-family:system-ui;
+background:linear-gradient(135deg,#eef2ff,#f8fafc);
+display:flex;
+justify-content:center;
+align-items:center;
+padding:16px;
 }
 
-#map{
-height:100%;
-width:100%;
-}
-
-.panel{
-position:absolute;
-top:10px;
-left:10px;
-z-index:1000;
+.card{
 background:white;
-padding:15px;
-border-radius:12px;
-box-shadow:0 4px 12px rgba(0,0,0,0.15);
-width:260px;
+padding:24px;
+border-radius:18px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+width:100%;
+max-width:520px;
+display:flex;
+flex-direction:column;
+gap:12px;
+text-align:center;
+}
+
+h2{
+margin:0;
 }
 
 button{
 width:100%;
-padding:10px;
+padding:14px;
 border:none;
-border-radius:8px;
-background:#4f46e5;
+border-radius:12px;
+background:#6366f1;
 color:white;
 font-weight:600;
+font-size:16px;
 cursor:pointer;
 }
 
+#map{
+width:100%;
+height:320px;
+border-radius:12px;
+}
+
 #status{
-margin-top:10px;
-font-size:13px;
+font-size:14px;
+font-weight:600;
 }
 
 </style>
@@ -54,39 +72,37 @@ font-size:13px;
 
 <body>
 
-<div class="panel">
+<div class="card">
 
-<h3>GPS Tracker</h3>
+<h2>📍 GPS Tracking</h2>
 
-<button onclick="startTracking()">Start Tracking</button>
+<button onclick="start()">Start Tracking</button>
 
-<div id="status">Waiting GPS...</div>
-
-</div>
+<div id="status">Menunggu GPS...</div>
 
 <div id="map"></div>
 
+</div>
+
 <script>
 
-const BASE_URL="https://script.google.com/macros/s/AKfycbx2muAd_frIox42s18VScvt8xaZj11rwB85KloGpK1zMF3uk9UaNowk6mYCqcnibISM/exec";
+const BASE_URL="https://script.google.com/macros/s/AKfycbyYPdTcsY2MpQIijcj2oplM1VtolC3JbTDfgSqoV2BDsafa5KBDJL9ggNdRp37-6ysG/exec";
 
 
-// ================= DEVICE ID =================
-
+// DEVICE ID
 let device_id=localStorage.getItem("device_id");
 
 if(!device_id){
 
-device_id="dev-"+Math.random().toString(36).substr(2,5);
+device_id="device-"+Math.random().toString(36).substr(2,5);
 
 localStorage.setItem("device_id",device_id);
 
 }
 
 
-// ================= MAP =================
-
-const map=L.map("map").setView([-7.25,112.75],13);
+// MAP
+let map=L.map("map").setView([-7.25,112.75],13);
 
 L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -94,20 +110,19 @@ L.tileLayer(
 ).addTo(map);
 
 
-// ================= STORAGE =================
-
+// STORAGE
 let markers={};
-let lines={};
+let polylines={};
+let historyCache={};
 
-const colors=[
-"red","blue","green","orange","purple",
-"black","brown","yellow"
-];
+const colors=["red","blue","green","orange","purple","black"];
 
 
-// ================= START GPS =================
+const statusEl=document.getElementById("status");
 
-function startTracking(){
+
+// START GPS
+function start(){
 
 if(!navigator.geolocation){
 
@@ -117,43 +132,35 @@ return;
 
 }
 
-document.getElementById("status").innerText="Device: "+device_id;
+statusEl.innerText="Device: "+device_id;
 
-navigator.geolocation.watchPosition(
-
-pos=>{
+navigator.geolocation.watchPosition(pos=>{
 
 const lat=pos.coords.latitude;
 const lng=pos.coords.longitude;
+const acc=pos.coords.accuracy;
 
-document.getElementById("status").innerText=
-device_id+" | "+lat.toFixed(5)+","+lng.toFixed(5);
+statusEl.innerText=
+"Device: "+device_id+
+" | "+lat.toFixed(5)+","+lng.toFixed(5);
 
-sendGPS(lat,lng);
+sendGPS(lat,lng,acc);
 
-},
+},err=>{
 
-err=>{
+statusEl.innerText="GPS error";
 
-document.getElementById("status").innerText="GPS error";
-
-},
-
-{
+},{
 enableHighAccuracy:true
-}
+});
 
-);
-
-// load semua device tiap 3 detik
-setInterval(loadDevices,3000);
+setInterval(loadHistory,3000);
 
 }
 
 
-// ================= SEND GPS =================
-
-async function sendGPS(lat,lng){
+// SEND GPS
+async function sendGPS(lat,lng,acc){
 
 try{
 
@@ -166,43 +173,32 @@ headers:{
 },
 
 body:JSON.stringify({
-
 device_id:device_id,
 ts:new Date().toISOString(),
 lat:lat,
-lng:lng
-
+lng:lng,
+accuracy_m:acc
 })
 
 });
 
 }catch(e){
 
-console.log(e);
+console.log("send error",e);
 
 }
 
 }
 
 
-// ================= UPDATE DEVICE =================
+// UPDATE DEVICE
+function updateDevice(id,points){
 
-function updateDevice(id,lat,lng){
-
-// warna berdasarkan index device
-let index=Object.keys(markers).indexOf(id);
-
-if(index==-1){
-
-index=Object.keys(markers).length;
-
-}
-
-const color=colors[index % colors.length];
-
-
-// buat marker jika belum ada
 if(!markers[id]){
+
+const color=colors[
+Object.keys(markers).length % colors.length
+];
 
 const icon=L.divIcon({
 
@@ -218,35 +214,32 @@ border-radius:50%;
 
 });
 
-markers[id]=L.marker([lat,lng],{icon})
+markers[id]=L.marker(points[points.length-1],{icon})
 .addTo(map)
 .bindPopup("Device: "+id);
 
-lines[id]=L.polyline([],{
+polylines[id]=L.polyline(points,{
 color:color,
 weight:4
 }).addTo(map);
 
-}
+}else{
 
+markers[id].setLatLng(points[points.length-1]);
 
-// update posisi
-markers[id].setLatLng([lat,lng]);
-
-lines[id].addLatLng([lat,lng]);
+polylines[id].setLatLngs(points);
 
 }
 
+}
 
-// ================= LOAD DEVICE HISTORY =================
 
-async function loadDevices(){
+// LOAD HISTORY
+async function loadHistory(){
 
 try{
 
-const res=await fetch(
-BASE_URL+"?path=/telemetry/gps/history&limit=200"
-);
+const res=await fetch(BASE_URL+"?path=/telemetry/gps/history&limit=200");
 
 const json=await res.json();
 
@@ -266,7 +259,7 @@ grouped[p.device_id]=[];
 
 }
 
-grouped[p.device_id].push(p);
+grouped[p.device_id].push([p.lat,p.lng]);
 
 });
 
@@ -274,19 +267,13 @@ grouped[p.device_id].push(p);
 // render tiap device
 Object.keys(grouped).forEach(id=>{
 
-const points=grouped[id];
-
-points.forEach(pt=>{
-
-updateDevice(id,pt.lat,pt.lng);
-
-});
+updateDevice(id,grouped[id]);
 
 });
 
 }catch(e){
 
-console.log(e);
+console.log("history error",e);
 
 }
 
