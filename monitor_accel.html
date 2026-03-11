@@ -151,6 +151,7 @@ const BASE_URL="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j
 
 let device="";
 let lastUpdate=0;
+let lastDataTime=0;
 
 const chart=new Chart(document.getElementById("chart"),{
 
@@ -242,6 +243,13 @@ cache:"no-store"
 const json = await res.json();
 
 if(!json.ok || !json.data) return;
+
+const dataTime = new Date(json.data.t).getTime();
+
+// jika data sama dengan sebelumnya → jangan update
+if(dataTime === lastDataTime) return;
+
+lastDataTime = dataTime;
 
 const x = Number(json.data.x);
 const y = Number(json.data.y);
