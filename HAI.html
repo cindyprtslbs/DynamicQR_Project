@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Accelerometer Client</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: linear-gradient(135deg,#eef2ff,#f8fafc);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  margin:0;
+}
+
+.container{
+  background:white;
+  padding:32px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  width:360px;
+  text-align:center;
+}
+
+h2{
+  margin-top:0;
+  margin-bottom:16px;
+  color:#1e293b;
+}
+
+.form-group{
+  display:flex;
+  flex-direction:column;
+  text-align:left;
+  margin-bottom:12px;
+}
+
+.form-group label{
+  font-size:14px;
+  font-weight:600;
+  color:#334155;
+  margin-bottom:4px;
+}
+
+.form-group input{
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e2e8f0;
+  font-size:14px;
+}
+
+#live{
+  font-size:14px;
+  color:#475569;
+  margin-bottom:14px;
+  padding:10px;
+  background:#f8fafc;
+  border-radius:10px;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+.buttons{
+  display:flex;
+  gap:10px;
+  margin-bottom:16px;
+}
+
+button{
+  flex:1;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:#6366f1;
+  color:white;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button.stop{
+  background:#ef4444;
+}
+
+canvas{
+  margin:10px 0;
+}
+
+h3{
+  font-size:15px;
+  color:#1e293b;
+  margin-bottom:8px;
+}
+
+pre{
+  background:#f8fafc;
+  padding:12px;
+  border-radius:12px;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+  font-size:13px;
+  color:#334155;
+  text-align:left;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2>Accelerometer (Batch)</h2>
+
+  <div class="form-group">
+    <label>Device ID</label>
+    <input id="deviceInput">
+  </div>
+
+  <p id="live">Waiting sensor...</p>
+
+  <div class="buttons">
+    <button onclick="start()">Start</button>
+    <button class="stop" onclick="stop()">Stop</button>
+  </div>
+
+  <canvas id="chart" height="160"></canvas>
+
+  <h3>Latest from Server</h3>
+  <pre id="latest">-</pre>
+
+</div>
+
+<script>
+
+const BASE_URL="https://script.google.com/macros/s/AKfycbzcXUoW72V2buKQi8d4lP-5j_AdL72AF3zsPVQ1dpP1oPEdqEt9bt3COS5G08aL9SV2/exec"; 
+
+// ================= DEFAULT DEVICE ID =================
+
+// const defaultDevice="dev-001"+Math.random().toString(36).substring(2,7);
+const defaultDevice="dev-001";
+
+document.getElementById("deviceInput").value=defaultDevice;
+
+let device_id=defaultDevice;
+
+let samples=[];
+let timerSend=null;
+let motionHandler=null;
+let isRunning=false;
+
+let lastSampleTime = 0;
+
+
+// ===== CHART =====
+
+const ctx = document.getElementById("chart").getContext("2d");
+
+const chart = new Chart(ctx,{
+  type:"line",
+  data:{
+    labels:[],
+    datasets:[
+      {label:"X", borderColor:"red", data:[], tension:0.3},
+      {label:"Y", borderColor:"green", data:[], tension:0.3},
+      {label:"Z", borderColor:"blue", data:[], tension:0.3}
+    ]
+  },
+  options:{
+    responsive:true,
+    animation:false,
+    scales:{
+      y:{min:-20,max:20}
+    }
+  }
+});
+
+
+function updateChart(x,y,z){
+
+  const t=new Date().toLocaleTimeString();
+
+  chart.data.labels.push(t);
+  chart.data.datasets[0].data.push(x);
+  chart.data.datasets[1].data.push(y);
+  chart.data.datasets[2].data.push(z);
+
+  if(chart.data.labels.length>30){
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(d=>d.data.shift());
+  }
+
+  chart.update();
+}
+
+
+// ================= START =================
+
+function start(){
+
+  const input=document.getElementById("deviceInput").value.trim();
+
+  if(!input){
+    alert("Device ID wajib diisi");
+    return;
+  }
+
+  device_id=input;
+
+  if(isRunning) return;
+
+  isRunning=true;
+
+  motionHandler = e=>{
+
+    const now=Date.now();
+    if(now-lastSampleTime<200) return;
+    lastSampleTime=now;
+
+    const acc=e.accelerationIncludingGravity;
+    if(!acc) return;
+
+    const x=acc.x;
+    const y=acc.y;
+    const z=acc.z;
+
+    document.getElementById("live").innerText=
+      `Device:${device_id} | x:${x.toFixed(2)} y:${y.toFixed(2)} z:${z.toFixed(2)}`;
+
+    updateChart(x,y,z);
+
+    samples.push({
+      t:new Date().toISOString(),
+      x:x,
+      y:y,
+      z:z
+    });
+
+  };
+
+  window.addEventListener("devicemotion",motionHandler);
+
+  timerSend=setInterval(sendBatch,5000);
+
+}
+
+
+// ================= STOP =================
+
+function stop(){
+
+  if(!isRunning) return;
+
+  isRunning=false;
+
+  clearInterval(timerSend);
+  timerSend=null;
+
+  if(motionHandler){
+    window.removeEventListener("devicemotion",motionHandler);
+    motionHandler=null;
+  }
+
+  samples=[];
+
+  document.getElementById("live").innerText="Stopped";
+
+}
+
+
+// ================= SEND BATCH =================
+
+async function sendBatch(){
+
+  if(samples.length===0) return;
+
+  const payload={
+    device_id:device_id,
+    ts:new Date().toISOString(),
+    samples:samples
+  };
+
+  samples=[];
+
+  try{
+
+    const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
+      method:"POST",
+      body:JSON.stringify(payload)
+    });
+
+    const json=await res.json();
+
+    console.log("POST:",json);
+
+  }catch(err){
+
+    console.log("send error",err);
+
+  }
+
+}
+
+
+// ================= GET LATEST =================
+
+async function getLatest(){
+
+  if(!device_id) return;
+
+  try{
+
+    const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id);
+
+    const json=await res.json();
+
+    if(json.ok){
+
+      document.getElementById("latest").innerText=
+
+`time: ${json.data.t}
+x: ${json.data.x}
+y: ${json.data.y}
+z: ${json.data.z}`;
+
+    }
+
+  }catch(err){
+
+    console.log("latest error");
+
+  }
+
+}
+
+setInterval(getLatest,3000);
+
+</script>
+
+</body>
+</html>
