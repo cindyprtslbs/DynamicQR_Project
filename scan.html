@@ -198,18 +198,20 @@ const token=url.searchParams.get("token");
 const course=url.searchParams.get("course");
 const session=url.searchParams.get("session");
 
-const payload={
-user_id:nimInput.value,
-device_id:deviceId,
-course_id:course,
-session_id:session,
-qr_token:token,
-ts:new Date().toISOString()
+// Ubah bagian ini di dalam async function onScanSuccess(decodedText)
+const payload = {
+    path: "/presence/checkin", // Tambahkan path di dalam payload JSON
+    user_id: nimInput.value,
+    device_id: deviceId,
+    course_id: course,
+    session_id: session,
+    qr_token: token,
+    ts: new Date().toISOString()
 };
 
-const res=await fetch(`${BASE}?path=/presence/checkin`,{
-method:"POST",
-body:JSON.stringify(payload)
+const res = await fetch(BASE, { // Hilangkan ?path= di URL-nya
+    method: "POST",
+    body: JSON.stringify(payload)
 });
 
 const json=await res.json();
