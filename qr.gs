@@ -12,7 +12,7 @@
 --primary:#6366f1;
 --text:#1e293b;
 }
-
+ 
 *{
 box-sizing:border-box;
 }
