@@ -111,7 +111,7 @@ to{opacity:1;transform:translateY(0);}
 
 <body>
 <div class="container">
-<h2>Presensi Mahasiswa UNAIR</h2>
+<h2>Presensi Mahasiswa</h2>
 
 <div class="input-group">
 <label>NIM</label>
@@ -198,20 +198,21 @@ const token=url.searchParams.get("token");
 const course=url.searchParams.get("course");
 const session=url.searchParams.get("session");
 
-// Ubah bagian ini di dalam async function onScanSuccess(decodedText)
+// 1. Tambahkan path di dalam payload (Body JSON)
 const payload = {
-    path: "/presence/checkin", // Tambahkan path di dalam payload JSON
-    user_id: nimInput.value,
-    device_id: deviceId,
-    course_id: course,
-    session_id: session,
-    qr_token: token,
-    ts: new Date().toISOString()
+  path: "/presence/checkin", // <--- TAMBAHKAN INI
+  user_id: nimInput.value,
+  device_id: deviceId,
+  course_id: course,
+  session_id: session,
+  qr_token: token,
+  ts: new Date().toISOString()
 };
 
-const res = await fetch(BASE, { // Hilangkan ?path= di URL-nya
-    method: "POST",
-    body: JSON.stringify(payload)
+// 2. Pastikan di URL fetch juga ada ?path=
+const res = await fetch(`${BASE}?path=/presence/checkin`, {
+  method: "POST",
+  body: JSON.stringify(payload)
 });
 
 const json=await res.json();
