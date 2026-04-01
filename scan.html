@@ -131,7 +131,7 @@ to{opacity:1;transform:translateY(0);}
 </div>
 
 <script>
-const BASE="https://script.google.com/macros/s/AKfycbxySS5-lojND4iGPC8mXwi9EDs01mbL50ncC4hT7sfkDZWQC-k3HNuDBtIQmyM7h965/exec";
+const BASE="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
 
 const reader=document.getElementById("reader");
 const badge=document.getElementById("statusBadge");
@@ -198,21 +198,18 @@ const token=url.searchParams.get("token");
 const course=url.searchParams.get("course");
 const session=url.searchParams.get("session");
 
-// 1. Tambahkan path di dalam payload (Body JSON)
-const payload = {
-  path: "/presence/checkin", // <--- TAMBAHKAN INI
-  user_id: nimInput.value,
-  device_id: deviceId,
-  course_id: course,
-  session_id: session,
-  qr_token: token,
-  ts: new Date().toISOString()
+const payload={
+user_id:nimInput.value,
+device_id:deviceId,
+course_id:course,
+session_id:session,
+qr_token:token,
+ts:new Date().toISOString()
 };
 
-// 2. Pastikan di URL fetch juga ada ?path=
-const res = await fetch(`${BASE}?path=/presence/checkin`, {
-  method: "POST",
-  body: JSON.stringify(payload)
+const res=await fetch(`${BASE}?path=/presence/checkin`,{
+method:"POST",
+body:JSON.stringify(payload)
 });
 
 const json=await res.json();
