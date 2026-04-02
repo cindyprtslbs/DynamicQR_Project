@@ -150,11 +150,17 @@ overflow:auto;
     <input id="deviceInput">
   </div>
 
+  <div class="form-group">
+    <label>Target Base URL (Swap Test)</label>
+    <input id="baseUrlInput" placeholder="https://script.google.com/...">
+  </div>
+
   <p id="live">Waiting sensor...</p>
 
   <div class="buttons">
     <button onclick="start()">Start</button>
     <button class="stop" onclick="stop()">Stop</button>
+    <button onclick="swapUrl()">Swap URL</button>
   </div>
 
   <canvas id="chart" height="160"></canvas>
@@ -166,7 +172,10 @@ overflow:auto;
 
 <script>
 
-const BASE_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec"; 
+const PRODUCTION_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
+const TEST_URL="https://script.google.com/macros/s/AKfycbxySS5-lojND4iGPC8mXwi9EDs01mbL50ncC4hT7sfkDZWQC-k3HNuDBtIQmyM7h965/exec";
+
+const DEFAULT_BASE_URL=TEST_URL; 
 
 // ================= DEFAULT DEVICE ID =================
 
@@ -174,8 +183,10 @@ const BASE_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AG
 const defaultDevice="dev-001";
 
 document.getElementById("deviceInput").value=defaultDevice;
+document.getElementById("baseUrlInput").value=DEFAULT_BASE_URL;
 
 let device_id=defaultDevice;
+let baseUrl=DEFAULT_BASE_URL;
 
 let samples=[];
 let timerSend=null;
@@ -232,6 +243,7 @@ function updateChart(x,y,z){
 function start(){
 
   const input=document.getElementById("deviceInput").value.trim();
+  const baseUrlInput=document.getElementById("baseUrlInput").value.trim();
 
   if(!input){
     alert("Device ID wajib diisi");
@@ -239,6 +251,7 @@ function start(){
   }
 
   device_id=input;
+  baseUrl = baseUrlInput || DEFAULT_BASE_URL;
 
   if(isRunning) return;
 
@@ -301,6 +314,16 @@ function stop(){
 }
 
 
+// ================= SWAP URL =================
+
+function swapUrl(){
+  const current = document.getElementById("baseUrlInput").value;
+  const newUrl = current === PRODUCTION_URL ? TEST_URL : PRODUCTION_URL;
+  document.getElementById("baseUrlInput").value = newUrl;
+  baseUrl = newUrl;
+}
+
+
 // ================= SEND BATCH =================
 
 async function sendBatch(){
@@ -317,7 +340,7 @@ async function sendBatch(){
 
   try{
 
-    const res=await fetch(BASE_URL+"?path=/telemetry/accel",{
+    const res=await fetch(baseUrl+"?path=/telemetry/accel",{
       method:"POST",
       body:JSON.stringify(payload)
     });
@@ -343,7 +366,7 @@ async function getLatest(){
 
   try{
 
-    const res=await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device_id);
+    const res=await fetch(baseUrl+"?path=/telemetry/accel/latest&device_id="+device_id);
 
     const json=await res.json();
 
