@@ -123,6 +123,11 @@ to{opacity:1;transform:translateY(0);}
 <input id="deviceInput" placeholder="dev-001">
 </div>
 
+<div class="input-group">
+  <label>Target Base URL (Swap Test)</label>
+  <input id="baseUrlInput" placeholder="https://script.google.com/...">
+</div>
+
 <button onclick="startScanner()">Scan QR</button>
 
 <div id="reader"></div>
@@ -152,6 +157,9 @@ badge.style.display="block";
 }
 
 function startScanner(){
+  // Mengambil URL dari input, jika kosong gunakan URL default Anda
+    const customBase = document.getElementById("baseUrlInput").value.trim();
+    const BASE = customBase || "https://script.google.com/macros/s/AKfycbzv.../exec";
 
 const nim = nimInput.value.trim();
 deviceId = document.getElementById("deviceInput").value.trim();
