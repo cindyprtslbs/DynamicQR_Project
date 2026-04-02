@@ -79,13 +79,7 @@ button:hover{
 
 <h2>GPS Tracking</h2>
 
-<div style="margin-bottom:12px;">
-  <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px;">Target Base URL (Swap Test)</label>
-  <input id="baseUrlInput" placeholder="https://script.google.com/..." style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid #e2e8f0; font-size:14px; outline:none;">
-</div>
-
 <button onclick="start()">Start Tracking</button>
-<button onclick="swapUrl()" style="margin-top:8px; background:#10b981;">Swap URL</button>
 
 <div id="status">Menunggu GPS...</div>
 
@@ -95,10 +89,7 @@ button:hover{
 
 <script>
 
-const PRODUCTION_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
-const TEST_URL="https://script.google.com/macros/s/AKfycbxySS5-lojND4iGPC8mXwi9EDs01mbL50ncC4hT7sfkDZWQC-k3HNuDBtIQmyM7h965/exec";
-
-const DEFAULT_BASE_URL=TEST_URL;
+const BASE_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
 
 // ================= DEVICE ID AUTO =================
 
@@ -108,10 +99,6 @@ if(!device_id){
   device_id="device-"+Math.random().toString(36).substring(2,6);
   localStorage.setItem("device_id",device_id);
 }
-
-document.getElementById("baseUrlInput").value=DEFAULT_BASE_URL;
-
-let baseUrl=DEFAULT_BASE_URL;
 
 // ================= MAP INIT =================
 
@@ -135,9 +122,6 @@ const statusEl=document.getElementById("status");
 // ================= START GPS =================
 
 function start(){
-
-  const baseUrlInput = document.getElementById("baseUrlInput").value.trim();
-  baseUrl = baseUrlInput || DEFAULT_BASE_URL;
 
   if(!navigator.geolocation){
     alert("GPS tidak tersedia");
@@ -177,7 +161,7 @@ function start(){
 
 async function sendGPS(lat,lng,acc){
 
-  await fetch(baseUrl+"?path=/telemetry/gps",{
+  await fetch(BASE_URL+"?path=/telemetry/gps",{
     method:"POST",
     body:JSON.stringify({
       device_id:device_id,
@@ -292,7 +276,7 @@ if(id === device_id){
 
 async function loadHistory(){
 
-  const res=await fetch(baseUrl+"?path=/telemetry/gps/history&limit=200");
+  const res=await fetch(BASE_URL+"?path=/telemetry/gps/history&limit=200");
 
   const json=await res.json();
 
@@ -306,15 +290,6 @@ async function loadHistory(){
 
   });
 
-}
-
-// ================= SWAP URL =================
-
-function swapUrl(){
-  const current = document.getElementById("baseUrlInput").value;
-  const newUrl = current === PRODUCTION_URL ? TEST_URL : PRODUCTION_URL;
-  document.getElementById("baseUrlInput").value = newUrl;
-  baseUrl = newUrl;
 }
 
 </script>
