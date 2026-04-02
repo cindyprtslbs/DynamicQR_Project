@@ -115,9 +115,7 @@ margin-top:25px;
 
 <div class="controls">
 <input id="deviceInput" value="dev-001">
-<input id="baseUrlInput" placeholder="https://script.google.com/..." style="width:300px; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:14px; outline:none;">
 <button onclick="startMonitor()">Monitor</button>
-<button onclick="swapUrl()" style="background:#10b981;">Swap URL</button>
 </div>
 
 </div>
@@ -149,14 +147,7 @@ margin-top:25px;
 
 <script>
 
-const PRODUCTION_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
-const TEST_URL="https://script.google.com/macros/s/AKfycbxySS5-lojND4iGPC8mXwi9EDs01mbL50ncC4hT7sfkDZWQC-k3HNuDBtIQmyM7h965/exec";
-
-const DEFAULT_BASE_URL=TEST_URL;
-
-document.getElementById("baseUrlInput").value=DEFAULT_BASE_URL;
-
-let baseUrl=DEFAULT_BASE_URL;
+const BASE_URL="https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec";
 
 let device="";
 let lastUpdate=0;
@@ -186,8 +177,6 @@ scales:{y:{min:-20,max:20}}
 function startMonitor(){
 
 device=document.getElementById("deviceInput").value.trim();
-const baseUrlInput = document.getElementById("baseUrlInput").value.trim();
-baseUrl = baseUrlInput || DEFAULT_BASE_URL;
 
 chart.data.labels=[];
 chart.data.datasets.forEach(d=>d.data=[]);
@@ -247,7 +236,7 @@ if(!device) return;
 
 try{
 
-const res = await fetch(baseUrl+"?path=/telemetry/accel/latest&device_id="+device,{
+const res = await fetch(BASE_URL+"?path=/telemetry/accel/latest&device_id="+device,{
 cache:"no-store"
 });
 
@@ -270,15 +259,6 @@ updateChart(x,y,z);
 
 }catch(e){}
 
-}
-
-// ================= SWAP URL =================
-
-function swapUrl(){
-  const current = document.getElementById("baseUrlInput").value;
-  const newUrl = current === PRODUCTION_URL ? TEST_URL : PRODUCTION_URL;
-  document.getElementById("baseUrlInput").value = newUrl;
-  baseUrl = newUrl;
 }
 
 setInterval(fetchData,150);
