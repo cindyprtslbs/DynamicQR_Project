@@ -64,13 +64,16 @@ Untuk accel.html dan gps.html:
 Setiap modul memiliki BASE_URL masing-masing:
 
 ACCELEROMETER:
-https://script.google.com/macros/s/AKfycbwOARo3-vfC-44VcO30KZ1PLVntW6s-iRXrhwYY9aVfMNPM36i2oYIYoXp8fAPlXNlx/exec
+https://cindyprtslbs.github.io/DynamicQR_Project/accel.html
 
 GPS:
-https://script.google.com/macros/s/AKfycbytvsRFhjR45af_ly5AiHv-c2gPJ5oRADjfREgFDHB3N2VTn5NBcY7Q3CW8XcVv10qY/exec
+https://cindyprtslbs.github.io/DynamicQR_Project/gps.html
 
 PRESENCE:
-https://script.google.com/macros/s/AKfycbyTPZsVHNWOo176DZBhExkDSzy2cSriBxttIQ4-pp5xbBM_sUSPaMqRk1UofhPxStQ/exec
+https://cindyprtslbs.github.io/DynamicQR_Project/scan.html
+
+Generate QR:
+https://script.google.com/macros/s/AKfycbzv51G_mCrDQfYPiH6xsz2AGXJwLvhryBJJhnhe7e69Quf8Dgjkj6n_e73HBKUJyBos/exec
 
 Format endpoint:
 BASE_URL + ?path=/endpoint
